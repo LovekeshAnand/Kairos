@@ -1,21 +1,35 @@
 {
   "name": "kairos",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Kairos - Autonomous AI Engine with Notion Operations Interface",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node src/test-notion.js"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "morgan": "^1.10.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/LovekeshAnand/Kairos.git"
   },
-  "keywords": [],
+  "keywords": [
+    "notion",
+    "gmail",
+    "whatsapp",
+    "automation",
+    "ai",
+    "webhooks"
+  ],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/LovekeshAnand/Kairos/issues"
-  },
-  "homepage": "https://github.com/LovekeshAnand/Kairos#readme"
+  "type": "commonjs"
 }
