@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node src/test-notion.js"
+    "test:all": "node tests/test-pipeline.js",
+    "test:notion": "node tests/test-notion.js",
+    "test:flow-a": "node tests/test-flow-a.js",
+    "test:webhooks": "node tests/test-webhooks.js",
+    "setup:notion": "node scripts/init-notion-databases.js"
   },
   "dependencies": {
     "@notionhq/client": "^2.2.15",

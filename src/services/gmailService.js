@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
+const storageService = require('./storageService');
 require('dotenv').config();
-
-let lastStoredHistoryId = null;
 
 function getOAuth2Client() {
   const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI, GMAIL_REFRESH_TOKEN } = process.env;
@@ -12,7 +11,7 @@ function getOAuth2Client() {
   const oauth2Client = new google.auth.OAuth2(
     GMAIL_CLIENT_ID,
     GMAIL_CLIENT_SECRET,
-    GMAIL_REDIRECT_URI || 'http://localhost:3000/auth/google/callback'
+    GMAIL_REDIRECT_URI || 'https://developers.google.com/oauthplayground'
   );
 
   oauth2Client.setCredentials({
@@ -29,21 +28,22 @@ function getGmailClient() {
 }
 
 /**
- * Initiates the users.watch() Pub/Sub subscription on the Gmail inbox
+ * Initiates or renews the users.watch() Pub/Sub subscription on Gmail
  */
 async function startGmailWatch() {
   const gmail = getGmailClient();
   if (!gmail) {
-    console.warn('⚠️ Gmail credentials not configured. Watch cannot be started.');
+    console.warn('⚠️ Gmail credentials not fully configured in .env. Skipping watch registration.');
     return { success: false, reason: 'Missing credentials' };
   }
 
-  try {
-    const topicName = process.env.GMAIL_PUB_SUB_TOPIC;
-    if (!topicName) {
-      throw new Error('GMAIL_PUB_SUB_TOPIC is not defined in .env');
-    }
+  const topicName = process.env.GMAIL_PUB_SUB_TOPIC;
+  if (!topicName) {
+    console.warn('⚠️ GMAIL_PUB_SUB_TOPIC is not defined in .env.');
+    return { success: false, reason: 'Missing GMAIL_PUB_SUB_TOPIC' };
+  }
 
+  try {
     const res = await gmail.users.watch({
       userId: 'me',
       requestBody: {
@@ -53,17 +53,22 @@ async function startGmailWatch() {
       }
     });
 
-    lastStoredHistoryId = res.data.historyId;
-    console.log(`✅ Gmail Watch successfully started! History ID: ${res.data.historyId}, Expiration: ${res.data.expiration}`);
+    storageService.updateWatchState({
+      lastHistoryId: res.data.historyId,
+      watchExpiration: res.data.expiration,
+      lastRenewed: new Date().toISOString()
+    });
+
+    console.log(`✅ [Gmail] users.watch() active! Starting historyId: ${res.data.historyId}, Expires: ${new Date(Number(res.data.expiration)).toLocaleString()}`);
     return { success: true, historyId: res.data.historyId, expiration: res.data.expiration };
   } catch (error) {
-    console.error('❌ Failed to start Gmail watch:', error.message);
+    console.error('❌ [Gmail] Failed to register users.watch():', error.message);
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Fetches and parses full email details for a given message ID
+ * Fetches and parses an email message by ID
  */
 async function fetchMessage(messageId) {
   const gmail = getGmailClient();
@@ -77,13 +82,13 @@ async function fetchMessage(messageId) {
     });
 
     const headers = res.data.payload?.headers || [];
-    const getHeader = (name) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+    const getHeader = name => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 
     const subject = getHeader('Subject');
     const sender = getHeader('From');
     const date = getHeader('Date');
 
-    // Extract body
+    // Extract text body
     let body = '';
     const parts = res.data.payload?.parts || [];
     if (res.data.payload?.body?.data) {
@@ -104,7 +109,7 @@ async function fetchMessage(messageId) {
       body: body.trim() || res.data.snippet || ''
     };
   } catch (error) {
-    console.error(`❌ Failed to fetch message ${messageId}:`, error.message);
+    console.error(`❌ [Gmail] Failed fetching message ${messageId}:`, error.message);
     return null;
   }
 }
@@ -114,14 +119,14 @@ async function fetchMessage(messageId) {
  */
 async function processHistoryUpdate(newHistoryId, onNewEmailCallback) {
   const gmail = getGmailClient();
-  if (!gmail) {
-    console.warn('⚠️ Gmail client not ready for history processing.');
-    return [];
-  }
+  if (!gmail) return [];
+
+  const watchState = storageService.getWatchState();
+  const lastStoredHistoryId = watchState.lastHistoryId;
 
   if (!lastStoredHistoryId) {
-    lastStoredHistoryId = newHistoryId;
-    console.log(`ℹ️ Initialized baseline historyId to: ${newHistoryId}`);
+    storageService.updateWatchState({ lastHistoryId: newHistoryId });
+    console.log(`ℹ️ Baseline Gmail historyId initialized to: ${newHistoryId}`);
     return [];
   }
 
@@ -139,36 +144,41 @@ async function processHistoryUpdate(newHistoryId, onNewEmailCallback) {
       const added = h.messagesAdded || [];
       for (const m of added) {
         if (m.message?.id) {
-          const emailData = await fetchMessage(m.message.id);
-          if (emailData && onNewEmailCallback) {
-            await onNewEmailCallback(emailData);
+          // Idempotency check
+          if (!storageService.isProcessed(`gmail_${m.message.id}`)) {
+            const emailData = await fetchMessage(m.message.id);
+            if (emailData) {
+              storageService.markProcessed(`gmail_${m.message.id}`, { subject: emailData.subject });
+              if (onNewEmailCallback) {
+                await onNewEmailCallback(emailData);
+              }
+              newMessages.push(emailData);
+            }
           }
-          newMessages.push(emailData);
         }
       }
     }
 
-    lastStoredHistoryId = newHistoryId;
+    storageService.updateWatchState({ lastHistoryId: newHistoryId });
     return newMessages;
   } catch (error) {
-    // If historyId is too old (404/400), resync
     if (error.code === 404 || error.message?.includes('historyId')) {
-      console.warn('⚠️ Stored historyId expired. Resyncing watch...');
+      console.warn('⚠️ Stored Gmail historyId expired. Re-registering watch...');
       await startGmailWatch();
     } else {
-      console.error('❌ Error processing Gmail history update:', error.message);
+      console.error('❌ [Gmail] Error processing history update:', error.message);
     }
     return [];
   }
 }
 
 /**
- * Sends a live email via Gmail API
+ * Sends an email via Gmail API
  */
 async function sendEmail({ to, subject, body, threadId = null }) {
   const gmail = getGmailClient();
   if (!gmail) {
-    console.warn('⚠️ Gmail client not available. Simulating email send.');
+    console.warn('⚠️ Gmail client not configured. Simulating email dispatch.');
     return { simulated: true, to, subject };
   }
 
@@ -195,6 +205,7 @@ async function sendEmail({ to, subject, body, threadId = null }) {
     requestBody
   });
 
+  console.log(`✉️ [Gmail] Email successfully sent to ${to}: "${subject}"`);
   return res.data;
 }
 

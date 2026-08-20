@@ -1,269 +1,465 @@
 const { Client } = require('@notionhq/client');
 require('dotenv').config();
 
+const notionApiKey = process.env.NOTION_API_KEY || process.env.NOTION_TOKEN;
+
 const notion = new Client({
-  auth: process.env.NOTION_TOKEN
+  auth: notionApiKey
 });
 
-let actionHubDbId = process.env.NOTION_ACTION_HUB_DB_ID;
-let runLogDbId = process.env.NOTION_RUN_LOG_DB_ID;
-
-let isInitialized = false;
+const RUN_LOG_DB_ID = process.env.NOTION_RUN_LOG_DB_ID;
+const INVOICES_DB_ID = process.env.NOTION_INVOICES_DB_ID;
+const TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
+const REQUESTS_DB_ID = process.env.NOTION_REQUESTS_DB_ID;
 
 /**
- * Initializes and validates Notion databases, discovering them if IDs are not explicitly configured.
+ * Validates Notion API connection and configured databases
  */
-async function initNotionDatabases() {
-  if (isInitialized && (actionHubDbId || runLogDbId)) {
-    return { success: true, actionHubDbId, runLogDbId };
-  }
-
-  if (!process.env.NOTION_TOKEN) {
-    console.warn('⚠️ NOTION_TOKEN is not set. Notion operations will be skipped.');
-    return { success: false, reason: 'NOTION_TOKEN missing' };
+async function validateNotion() {
+  if (!notionApiKey) {
+    console.warn('⚠️ NOTION_API_KEY is not set in environment.');
+    return { success: false, reason: 'NOTION_API_KEY missing' };
   }
 
   try {
-    const response = await notion.search({
-      filter: { value: 'database', property: 'object' }
-    });
-
-    for (const db of response.results) {
-      const title = db.title?.[0]?.plain_text || '';
-      if (title.toLowerCase().includes('action') || title.toLowerCase().includes('inbox') || title.toLowerCase().includes('kairos action')) {
-        actionHubDbId = actionHubDbId || db.id;
-        console.log(`📌 Found Action Hub Database: "${title}" (${db.id})`);
-      } else if (title.toLowerCase().includes('run') || title.toLowerCase().includes('log') || title.toLowerCase().includes('audit')) {
-        runLogDbId = runLogDbId || db.id;
-        console.log(`📌 Found Run Log Database: "${title}" (${db.id})`);
-      }
-    }
-
-    isInitialized = true;
+    const user = await notion.users.me({});
+    console.log(`✅ Connected to Notion as bot: "${user.name || user.id}"`);
     return {
       success: true,
-      actionHubDbId,
-      runLogDbId,
-      databasesFound: response.results.length
+      bot: user.name,
+      databases: {
+        runLog: RUN_LOG_DB_ID || 'missing',
+        invoices: INVOICES_DB_ID || 'missing',
+        tasks: TASKS_DB_ID || 'missing',
+        requests: REQUESTS_DB_ID || 'missing'
+      }
     };
-  } catch (error) {
-    isInitialized = true;
-    console.error('❌ Error initializing Notion databases:', error.message);
-    return { success: false, error: error.message };
+  } catch (err) {
+    console.error('❌ Notion connection validation failed:', err.message);
+    return { success: false, error: err.message };
   }
 }
 
 /**
- * Creates a new item in the Action Hub database
+ * Appends an authentic audit record to the Notion Run Log database
+ * Guaranteed to be called on EVERY run (success, pending, rejected, failed, ignored)
  */
-async function createActionItem({
-  title,
-  source,
-  sender,
-  priority = 'Medium',
-  category = 'General',
-  status = 'Needs Approval',
-  summary = '',
-  draftResponse = '',
-  rawMessage = '',
-  sourceId = ''
+async function writeRunLog({
+  flow = 'reminders',           // 'invoice' | 'meeting_transcript' | 'reminders'
+  triggerType = 'webhook',     // 'webhook' | 'cron' | 'notion_poll'
+  status = 'success',          // 'success' | 'failed' | 'pending_approval' | 'rejected' | 'ignored'
+  summary,                     // one-line human readable summary
+  relatedItemId = '',          // ID or reference of affected item
+  error = null
 }) {
-  if (!actionHubDbId) {
-    await initNotionDatabases();
-  }
-
-  if (!actionHubDbId) {
-    console.warn('⚠️ No Action Hub Database configured or found. Skipping Notion record creation.');
+  if (!RUN_LOG_DB_ID) {
+    console.warn('⚠️ NOTION_RUN_LOG_DB_ID is not configured. Log output:', summary);
     return null;
   }
 
   try {
     const page = await notion.pages.create({
-      parent: { database_id: actionHubDbId },
+      parent: { database_id: RUN_LOG_DB_ID },
       properties: {
-        'Title': {
-          title: [{ text: { content: title || 'Inbound Request' } }]
-        },
-        'Source': {
-          select: { name: source || 'Gmail' }
-        },
-        'Sender': {
-          rich_text: [{ text: { content: (sender || '').slice(0, 2000) } }]
-        },
-        'Priority': {
-          select: { name: priority }
-        },
-        'Category': {
-          select: { name: category }
-        },
-        'Status': {
-          select: { name: status }
-        },
-        'AI Summary': {
-          rich_text: [{ text: { content: (summary || '').slice(0, 2000) } }]
-        },
-        'Draft Response': {
-          rich_text: [{ text: { content: (draftResponse || '').slice(0, 2000) } }]
-        },
-        'Source ID': {
-          rich_text: [{ text: { content: (sourceId || '').slice(0, 2000) } }]
-        }
-      },
-      children: [
-        {
-          object: 'block',
-          type: 'heading_3',
-          heading_3: {
-            rich_text: [{ text: { content: '📩 Original Message Content' } }]
-          }
-        },
-        {
-          object: 'block',
-          type: 'code',
-          code: {
-            rich_text: [{ text: { content: (rawMessage || 'No body content').slice(0, 2000) } }],
-            language: 'plain text'
-          }
-        }
-      ]
-    });
-
-    console.log(`✅ Action Item created in Notion: ${page.id}`);
-    return page;
-  } catch (error) {
-    console.error('❌ Failed to create Action Item in Notion:', error.message);
-    throw error;
-  }
-}
-
-/**
- * Appends a row to the Run Log database (Audit Trail)
- */
-async function logExecution({
-  executionId,
-  trigger = 'Webhook',
-  status = 'Success',
-  actionTaken = '',
-  durationMs = 0,
-  errorDetails = ''
-}) {
-  if (!runLogDbId) {
-    await initNotionDatabases();
-  }
-
-  if (!runLogDbId) {
-    console.warn('⚠️ No Run Log Database configured or found. Skipping Run Log entry.');
-    return null;
-  }
-
-  try {
-    const page = await notion.pages.create({
-      parent: { database_id: runLogDbId },
-      properties: {
-        'Execution ID': {
-          title: [{ text: { content: executionId || `RUN-${Date.now()}` } }]
-        },
-        'Trigger': {
-          select: { name: trigger }
-        },
-        'Status': {
-          select: { name: status }
-        },
-        'Action Taken': {
-          rich_text: [{ text: { content: (actionTaken || '').slice(0, 2000) } }]
-        },
-        'Execution Time (ms)': {
-          number: durationMs
+        'Summary': {
+          title: [{ text: { content: (summary || 'Execution run').slice(0, 2000) } }]
         },
         'Timestamp': {
           date: { start: new Date().toISOString() }
         },
-        'Error Details': {
-          rich_text: [{ text: { content: (errorDetails || '').slice(0, 2000) } }]
+        'Flow': {
+          select: { name: flow }
+        },
+        'Trigger Type': {
+          select: { name: triggerType }
+        },
+        'Status': {
+          select: { name: status }
+        },
+        'Related Item': {
+          rich_text: [{ text: { content: (relatedItemId || '').slice(0, 2000) } }]
+        },
+        'Error': {
+          rich_text: [{ text: { content: (error ? String(error) : '').slice(0, 2000) } }]
         }
       }
     });
 
-    console.log(`📗 Run Log written in Notion: ${page.id} (${status})`);
+    console.log(`📗 [Run Log] Written to Notion: "${summary}" (${status})`);
     return page;
-  } catch (error) {
-    console.error('❌ Failed to write Run Log in Notion:', error.message);
+  } catch (err) {
+    console.error('❌ Failed to write Notion Run Log row:', err.message);
     return null;
   }
 }
 
+/* ========================================================================= */
+/* Flow A — Invoices Database Operations                                     */
+/* ========================================================================= */
+
 /**
- * Fetch items that have been approved by human in Notion
+ * Creates or stages an invoice item in Notion Invoices DB
  */
-async function fetchApprovedItems() {
-  if (!actionHubDbId) {
-    await initNotionDatabases();
+async function createInvoiceItem({
+  invoiceName,
+  recipientName,
+  phoneNumber,
+  amount = 0,
+  dueDate = null,
+  fileUrl = null,
+  status = 'New'
+}) {
+  if (!INVOICES_DB_ID) {
+    throw new Error('NOTION_INVOICES_DB_ID is not configured');
   }
-  if (!actionHubDbId) return [];
+
+  const properties = {
+    'Invoice Name': {
+      title: [{ text: { content: (invoiceName || 'New Invoice').slice(0, 2000) } }]
+    },
+    'Recipient Name': {
+      rich_text: [{ text: { content: (recipientName || '').slice(0, 2000) } }]
+    },
+    'Phone Number': {
+      phone_number: phoneNumber || null
+    },
+    'Amount': {
+      number: Number(amount) || 0
+    },
+    'Status': {
+      select: { name: status }
+    }
+  };
+
+  if (dueDate) {
+    properties['Due Date'] = { date: { start: dueDate } };
+  }
+
+  if (fileUrl) {
+    properties['File'] = {
+      files: [
+        {
+          name: `${invoiceName || 'invoice'}.pdf`,
+          external: { url: fileUrl }
+        }
+      ]
+    };
+  }
+
+  const page = await notion.pages.create({
+    parent: { database_id: INVOICES_DB_ID },
+    properties
+  });
+
+  return page;
+}
+
+/**
+ * Queries invoices by status (e.g. 'New', 'Approved', 'Awaiting Approval')
+ */
+async function fetchInvoicesByStatus(status) {
+  if (!INVOICES_DB_ID) return [];
 
   try {
     const response = await notion.databases.query({
-      database_id: actionHubDbId,
+      database_id: INVOICES_DB_ID,
       filter: {
         property: 'Status',
-        select: {
-          equals: 'Approved'
-        }
+        select: { equals: status }
       }
     });
 
     return response.results.map(page => {
-      const getProp = (name, type) => {
-        const prop = page.properties[name];
-        if (!prop) return '';
-        if (type === 'title') return prop.title?.[0]?.plain_text || '';
-        if (type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '';
-        if (type === 'select') return prop.select?.name || '';
-        return '';
+      const p = page.properties;
+      const getTitle = prop => prop?.title?.[0]?.plain_text || '';
+      const getRichText = prop => prop?.rich_text?.[0]?.plain_text || '';
+      const getPhone = prop => prop?.phone_number || '';
+      const getNumber = prop => prop?.number || 0;
+      const getDate = prop => prop?.date?.start || '';
+      const getSelect = prop => prop?.select?.name || '';
+      const getFile = prop => {
+        if (!prop?.files || prop.files.length === 0) return null;
+        return prop.files[0]?.file?.url || prop.files[0]?.external?.url || null;
       };
 
       return {
         id: page.id,
-        title: getProp('Title', 'title'),
-        source: getProp('Source', 'select'),
-        sender: getProp('Sender', 'rich_text'),
-        priority: getProp('Priority', 'select'),
-        category: getProp('Category', 'select'),
-        status: getProp('Status', 'select'),
-        draftResponse: getProp('Draft Response', 'rich_text'),
-        sourceId: getProp('Source ID', 'rich_text')
+        invoiceName: getTitle(p['Invoice Name']),
+        recipientName: getRichText(p['Recipient Name']),
+        phoneNumber: getPhone(p['Phone Number']),
+        amount: getNumber(p['Amount']),
+        dueDate: getDate(p['Due Date']),
+        status: getSelect(p['Status']),
+        fileUrl: getFile(p['File'])
       };
     });
-  } catch (error) {
-    console.error('❌ Error querying approved items in Notion:', error.message);
+  } catch (err) {
+    console.error(`❌ Error fetching invoices with status [${status}]:`, err.message);
     return [];
   }
 }
 
 /**
- * Update Notion item status (e.g. Approved -> Completed)
+ * Updates an invoice row's status
  */
-async function updateItemStatus(pageId, status) {
+async function updateInvoiceStatus(pageId, status) {
+  return await notion.pages.update({
+    page_id: pageId,
+    properties: {
+      'Status': { select: { name: status } }
+    }
+  });
+}
+
+/* ========================================================================= */
+/* Flow B — Tasks Database Operations                                        */
+/* ========================================================================= */
+
+/**
+ * Creates structured task item extracted from a meeting transcript
+ */
+async function createTaskItem({
+  task,
+  sourceMeeting = '',
+  owner = '',
+  dueDate = null,
+  reasoning = '',
+  status = 'Pending Review'
+}) {
+  if (!TASKS_DB_ID) {
+    throw new Error('NOTION_TASKS_DB_ID is not configured');
+  }
+
+  const properties = {
+    'Task': {
+      title: [{ text: { content: (task || 'Extracted Task').slice(0, 2000) } }]
+    },
+    'Source Meeting': {
+      rich_text: [{ text: { content: (sourceMeeting || '').slice(0, 2000) } }]
+    },
+    'Owner': {
+      rich_text: [{ text: { content: (owner || 'Unassigned').slice(0, 2000) } }]
+    },
+    'AI Reasoning': {
+      rich_text: [{ text: { content: (reasoning || '').slice(0, 2000) } }]
+    },
+    'Status': {
+      select: { name: status }
+    }
+  };
+
+  if (dueDate) {
+    properties['Due Date'] = { date: { start: dueDate } };
+  }
+
+  return await notion.pages.create({
+    parent: { database_id: TASKS_DB_ID },
+    properties
+  });
+}
+
+/**
+ * Queries tasks by status (e.g. 'Active', 'Pending Review')
+ */
+async function fetchTasksByStatus(status) {
+  if (!TASKS_DB_ID) return [];
+
   try {
-    return await notion.pages.update({
-      page_id: pageId,
-      properties: {
-        'Status': {
-          select: { name: status }
-        }
+    const response = await notion.databases.query({
+      database_id: TASKS_DB_ID,
+      filter: {
+        property: 'Status',
+        select: { equals: status }
       }
     });
-  } catch (error) {
-    console.error(`❌ Failed to update page ${pageId} status:`, error.message);
-    throw error;
+
+    return response.results.map(page => {
+      const p = page.properties;
+      return {
+        id: page.id,
+        task: p['Task']?.title?.[0]?.plain_text || '',
+        sourceMeeting: p['Source Meeting']?.rich_text?.[0]?.plain_text || '',
+        owner: p['Owner']?.rich_text?.[0]?.plain_text || '',
+        dueDate: p['Due Date']?.date?.start || '',
+        reasoning: p['AI Reasoning']?.rich_text?.[0]?.plain_text || '',
+        status: p['Status']?.select?.name || ''
+      };
+    });
+  } catch (err) {
+    console.error(`❌ Error fetching tasks with status [${status}]:`, err.message);
+    return [];
+  }
+}
+
+/**
+ * Updates a task status
+ */
+async function updateTaskStatus(pageId, status) {
+  return await notion.pages.update({
+    page_id: pageId,
+    properties: {
+      'Status': { select: { name: status } }
+    }
+  });
+}
+
+/* ========================================================================= */
+/* Flow C — Requests / Reminders Database Operations                         */
+/* ========================================================================= */
+
+/**
+ * Creates a structured request or reminder entry in Notion
+ */
+async function createRequestItem({
+  item,
+  source = 'email',
+  sender = '',
+  category = 'General',
+  priority = 'Medium',
+  status = 'Awaiting Approval',
+  summary = '',
+  draftResponse = '',
+  rawContent = ''
+}) {
+  if (!REQUESTS_DB_ID) {
+    throw new Error('NOTION_REQUESTS_DB_ID is not configured');
+  }
+
+  const page = await notion.pages.create({
+    parent: { database_id: REQUESTS_DB_ID },
+    properties: {
+      'Item': {
+        title: [{ text: { content: (item || 'Inbound Item').slice(0, 2000) } }]
+      },
+      'Source': {
+        select: { name: source }
+      },
+      'Sender': {
+        rich_text: [{ text: { content: (sender || '').slice(0, 2000) } }]
+      },
+      'Category': {
+        select: { name: category || 'General' }
+      },
+      'Priority': {
+        select: { name: priority || 'Medium' }
+      },
+      'Status': {
+        select: { name: status || 'Awaiting Approval' }
+      },
+      'Summary': {
+        rich_text: [{ text: { content: (summary || '').slice(0, 2000) } }]
+      }
+    },
+    children: [
+      {
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: [{ text: { content: '💬 AI Generated Draft Response' } }]
+        }
+      },
+      {
+        object: 'block',
+        type: 'quote',
+        quote: {
+          rich_text: [{ text: { content: (draftResponse || 'No draft generated').slice(0, 2000) } }]
+        }
+      },
+      {
+        object: 'block',
+        type: 'heading_3',
+        heading_3: {
+          rich_text: [{ text: { content: '📩 Original Message' } }]
+        }
+      },
+      {
+        object: 'block',
+        type: 'code',
+        code: {
+          rich_text: [{ text: { content: (rawContent || 'Empty').slice(0, 2000) } }],
+          language: 'plain text'
+        }
+      }
+    ]
+  });
+
+  return page;
+}
+
+/**
+ * Queries requests by status (e.g. 'Approved', 'Awaiting Approval')
+ */
+async function fetchRequestsByStatus(status) {
+  if (!REQUESTS_DB_ID) return [];
+
+  try {
+    const response = await notion.databases.query({
+      database_id: REQUESTS_DB_ID,
+      filter: {
+        property: 'Status',
+        select: { equals: status }
+      }
+    });
+
+    return response.results.map(page => {
+      const p = page.properties;
+      return {
+        id: page.id,
+        item: p['Item']?.title?.[0]?.plain_text || '',
+        source: p['Source']?.select?.name || 'email',
+        sender: p['Sender']?.rich_text?.[0]?.plain_text || '',
+        category: p['Category']?.select?.name || 'General',
+        priority: p['Priority']?.select?.name || 'Medium',
+        status: p['Status']?.select?.name || '',
+        summary: p['Summary']?.rich_text?.[0]?.plain_text || ''
+      };
+    });
+  } catch (err) {
+    console.error(`❌ Error fetching requests with status [${status}]:`, err.message);
+    return [];
+  }
+}
+
+/**
+ * Updates a request status
+ */
+async function updateRequestStatus(pageId, status) {
+  return await notion.pages.update({
+    page_id: pageId,
+    properties: {
+      'Status': { select: { name: status } }
+    }
+  });
+}
+
+/**
+ * Reads page body blocks (e.g. to extract the draft response block)
+ */
+async function getPageDraftResponse(pageId) {
+  try {
+    const blocks = await notion.blocks.children.list({ block_id: pageId });
+    const quoteBlock = blocks.results.find(b => b.type === 'quote');
+    return quoteBlock?.quote?.rich_text?.[0]?.plain_text || '';
+  } catch (err) {
+    return '';
   }
 }
 
 module.exports = {
   notion,
-  initNotionDatabases,
-  createActionItem,
-  logExecution,
-  fetchApprovedItems,
-  updateItemStatus
+  validateNotion,
+  writeRunLog,
+  // Flow A
+  createInvoiceItem,
+  fetchInvoicesByStatus,
+  updateInvoiceStatus,
+  // Flow B
+  createTaskItem,
+  fetchTasksByStatus,
+  updateTaskStatus,
+  // Flow C
+  createRequestItem,
+  fetchRequestsByStatus,
+  updateRequestStatus,
+  getPageDraftResponse
 };

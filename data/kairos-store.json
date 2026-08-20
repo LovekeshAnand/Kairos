@@ -1,0 +1,448 @@
+{
+  "incoming_items": [
+    {
+      "id": "test_mail_1787248681627",
+      "source": "email",
+      "sender": "sponsor.lead@techcorp.io",
+      "raw_content": "Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Please send over the invoice and bank transfer details before Friday so our accounts team can disburse payment.\n\nRegards,\nAlex Vance\nHead of Partnerships",
+      "received_at": "2026-08-20T17:58:01.628Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Hackathon Platinum Sponsorship Inquiry & Invoice request",
+        "category": "Billing",
+        "priority": "Medium",
+        "summary": "Inbound email message received regarding \"Hackathon Platinum Sponsorship Inquiry & Invoice request\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-818a-8515-eb3c9a07e4dc",
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:02.222Z"
+    },
+    {
+      "id": "test_mail_1787248681666",
+      "source": "email",
+      "sender": "sponsor.lead@techcorp.io",
+      "raw_content": "Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Please send over the invoice and bank transfer details before Friday so our accounts team can disburse payment.\n\nRegards,\nAlex Vance\nHead of Partnerships",
+      "received_at": "2026-08-20T17:58:01.668Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Hackathon Platinum Sponsorship Inquiry & Invoice request",
+        "category": "Billing",
+        "priority": "Medium",
+        "summary": "Inbound email message received regarding \"Hackathon Platinum Sponsorship Inquiry & Invoice request\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8187-ab26-c3874ca8ce6d",
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:02.271Z"
+    },
+    {
+      "id": "item_1787248683153_ru5y1",
+      "source": "meeting_transcript",
+      "sender": "Meeting Recorder",
+      "raw_content": "\nLovekesh: \"Welcome everyone. Let's assign action items for tomorrow's demo.\"\nRohan: \"I will finish testing the OpenWA gateway pairing with our test number.\"\nPriya: \"I will upload the sample client invoice to Notion and set up the approval status.\"\nLovekesh: \"Awesome. I'll make sure the live Run Log timestamps are verified.\"\n",
+      "received_at": "2026-08-20T17:58:03.153Z",
+      "status": "structured",
+      "structured_data": {
+        "meetingSummary": "Meeting transcript received and staged.",
+        "tasks": [
+          {
+            "task": "Review meeting transcript and assign pending items",
+            "owner": "Unassigned",
+            "dueDate": null,
+            "reasoning": "Automated fallback task for transcript review."
+          }
+        ]
+      },
+      "notion_page_id": null,
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:04.000Z"
+    },
+    {
+      "id": "item_1787248683514_x6l5r",
+      "source": "meeting_transcript",
+      "sender": "Meeting Recorder",
+      "raw_content": "\nLovekesh: \"Welcome everyone. Let's assign action items for tomorrow's demo.\"\nRohan: \"I will finish testing the OpenWA gateway pairing with our test number.\"\nPriya: \"I will upload the sample client invoice to Notion and set up the approval status.\"\nLovekesh: \"Awesome. I'll make sure the live Run Log timestamps are verified.\"\n",
+      "received_at": "2026-08-20T17:58:03.514Z",
+      "status": "structured",
+      "structured_data": {
+        "meetingSummary": "Meeting transcript received and staged.",
+        "tasks": [
+          {
+            "task": "Review meeting transcript and assign pending items",
+            "owner": "Unassigned",
+            "dueDate": null,
+            "reasoning": "Automated fallback task for transcript review."
+          }
+        ]
+      },
+      "notion_page_id": null,
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:04.029Z"
+    },
+    {
+      "id": "test_mail_1787248711129",
+      "source": "email",
+      "sender": "sponsor.lead@techcorp.io",
+      "raw_content": "Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Please send over the invoice and bank transfer details before Friday so our accounts team can disburse payment.\n\nRegards,\nAlex Vance\nHead of Partnerships",
+      "received_at": "2026-08-20T17:58:31.130Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Hackathon Platinum Sponsorship Inquiry & Invoice request",
+        "category": "Billing",
+        "priority": "Medium",
+        "summary": "Inbound email message received regarding \"Hackathon Platinum Sponsorship Inquiry & Invoice request\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-81ce-b38e-d0d9ffaf4783",
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:33.192Z"
+    },
+    {
+      "id": "item_1787248714064_qyzhc",
+      "source": "meeting_transcript",
+      "sender": "Meeting Recorder",
+      "raw_content": "\nLovekesh: \"Welcome everyone. Let's assign action items for tomorrow's demo.\"\nRohan: \"I will finish testing the OpenWA gateway pairing with our test number.\"\nPriya: \"I will upload the sample client invoice to Notion and set up the approval status.\"\nLovekesh: \"Awesome. I'll make sure the live Run Log timestamps are verified.\"\n",
+      "received_at": "2026-08-20T17:58:34.064Z",
+      "status": "structured",
+      "structured_data": {
+        "meetingSummary": "Meeting transcript received and staged.",
+        "tasks": [
+          {
+            "task": "Review meeting transcript and assign pending items",
+            "owner": "Unassigned",
+            "dueDate": null,
+            "reasoning": "Automated fallback task for transcript review."
+          }
+        ]
+      },
+      "notion_page_id": null,
+      "error": null,
+      "updatedAt": "2026-08-20T17:58:37.441Z"
+    },
+    {
+      "id": "wa_false_120363401411757582@g.us_AC2EE7FC88FB3BF0105F0E7D99E86442_222273231442136@lid",
+      "source": "whatsapp",
+      "sender": "120363401411757582",
+      "raw_content": "Arey nahi bhai. It kinda motivated me ab main bhi kaam karunga",
+      "received_at": "2026-08-20T18:54:03.840Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363401411757582",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363401411757582: \"Arey nahi bhai. It kinda motivated me ab main bhi kaam karunga\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-814c-ac11-da9c726e3266",
+      "error": null,
+      "updatedAt": "2026-08-20T18:54:08.875Z"
+    },
+    {
+      "id": "wa_false_120363401411757582@g.us_3EB021FEE5B7F5C43F693C_8401056698516@lid",
+      "source": "whatsapp",
+      "sender": "120363401411757582",
+      "raw_content": "areee nhi bhaiyaa ji, counter strike",
+      "received_at": "2026-08-20T18:54:27.188Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363401411757582",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363401411757582: \"areee nhi bhaiyaa ji, counter strike\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-817d-95c2-e931aefa7a79",
+      "error": null,
+      "updatedAt": "2026-08-20T18:54:28.554Z"
+    },
+    {
+      "id": "wa_false_120363401411757582@g.us_3EB07DFF6CFF7C86309120_8401056698516@lid",
+      "source": "whatsapp",
+      "sender": "120363401411757582",
+      "raw_content": "ek game hai",
+      "received_at": "2026-08-20T18:54:31.623Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363401411757582",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363401411757582: \"ek game hai\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-81c2-80f9-f68507d060bc",
+      "error": null,
+      "updatedAt": "2026-08-20T18:54:32.862Z"
+    },
+    {
+      "id": "wa_false_7370348429484@lid_3EB0F3E1E6CB01656BD5F1",
+      "source": "whatsapp",
+      "sender": "7370348429484",
+      "raw_content": "ovekesh we are having metting tommarow 4 pm ,",
+      "received_at": "2026-08-20T18:55:36.694Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Meeting Request: \"ovekesh we are having metting tomma...\"",
+        "category": "Meeting",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 7370348429484: \"ovekesh we are having metting tommarow 4 pm ,\".",
+        "draftResponse": "Yeah, let's schedule! I have noted this and added it to our calendar. Looking forward to connecting."
+      },
+      "notion_page_id": "3c23cc96-4d1f-81f5-9086-e494e2e30159",
+      "error": null,
+      "updatedAt": "2026-08-20T18:55:39.267Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_3EB0F4925AB9924FB2E824_126229105627262@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "bro ppt kha submit karni hogi ?",
+      "received_at": "2026-08-20T18:57:23.235Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"bro ppt kha submit karni hogi ?\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-81ee-a876-fef277d5e9ae",
+      "error": null,
+      "updatedAt": "2026-08-20T18:57:25.761Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_3EB0AC634685BB60296604_126229105627262@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "@35545266843883 bro ppt kha submit karni hogi ?",
+      "received_at": "2026-08-20T18:57:34.534Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"@35545266843883 bro ppt kha submit karni hogi ?\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8128-ac80-c0cb116cd9b0",
+      "error": null,
+      "updatedAt": "2026-08-20T18:57:35.876Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_3A2B39EA3E39226EBFE8_215547631390788@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "they'll tell us bro, why you sweating",
+      "received_at": "2026-08-20T19:00:37.623Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"they'll tell us bro, why you sweating\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-81da-b191-eae2ed79ad16",
+      "error": null,
+      "updatedAt": "2026-08-20T19:00:40.464Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_AC92940EE1568EA2BDD9310CD76DD9E8_253167233146891@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "@all",
+      "received_at": "2026-08-20T19:01:05.836Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"@all\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8175-a034-c89d9b7478e1",
+      "error": null,
+      "updatedAt": "2026-08-20T19:01:07.572Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_3A38FB42832CC7A4A491_215547631390788@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "i dont think so its compulsory but it'll be better for your team",
+      "received_at": "2026-08-20T19:02:21.167Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"i dont think so its compulsory but it'll be better for your team\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8198-8de4-dc7a62de8a76",
+      "error": null,
+      "updatedAt": "2026-08-20T19:02:24.529Z"
+    },
+    {
+      "id": "wa_false_120363409582504727@g.us_ACFD5A16782808CAEA8DAB1169190D61_253167233146891@lid",
+      "source": "whatsapp",
+      "sender": "120363409582504727",
+      "raw_content": "Okay thanks",
+      "received_at": "2026-08-20T19:02:52.545Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363409582504727",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363409582504727: \"Okay thanks\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8140-90fb-fceced1bab2a",
+      "error": null,
+      "updatedAt": "2026-08-20T19:02:53.879Z"
+    },
+    {
+      "id": "wa_false_7370348429484@lid_3EB0507A50726FFDC49FAC",
+      "source": "whatsapp",
+      "sender": "7370348429484@lid",
+      "raw_content": "i am planning to schedule metting on 30th of this month at 2 pm in the morning",
+      "received_at": "2026-08-20T19:07:04.373Z",
+      "status": "new",
+      "structured_data": null,
+      "notion_page_id": null,
+      "error": null
+    },
+    {
+      "id": "wa_false_120363401411757582@g.us_ACD33B02BA65D7F0B4B1EDF9C5C8407C_222273231442136@lid",
+      "source": "whatsapp",
+      "sender": "120363401411757582@g.us",
+      "raw_content": "With that being said, thank you so much for what all you told about working with mental health. \n\nWhat I concluded is \n\nTalking to friends, works (ofc) \nI feel when you move through and visit the world you learn a lot.\nBut for me the act of sitting with myself and churning some work out of the concoction that I learn is also important. That's something that needs effort. \nI ofc love when I would attend some exercising stuff. Particularly gymming. But yes it requires some good conditioning to my mind. \n\nI feel like, working with people, discussing things. Churning out something. Being in the moment. Idk that's a bit derailed. \n\nAnd well when you talk about friends, well - I have my colleagues to whom well, how much can I open with. I really appreciate them. I share some good banter. But yes I can really talk to them something like that hints that oh I might be planning to move into another direction in my career let's say.\n\nFriends. I have met good people. They have been kind and I have been kind to them as well. But yeah. The school friends they all have their own worlds now. I love when I meet them. \n\nI have got some good people here as well. Super super talented. Actually very polished in their perspective and well, very kind, again. I feel like I know some of you a little hint bit. That's why sometimes I feel like oh, rather than a question oh some tech update, can I just go out and say , how are you doing, and have a talk? Would it feel odd. I dk. \nSo yeah. Thanks for being there. \n\nThanks @199943797108896 for building this community of insanely talented humans.",
+      "received_at": "2026-08-20T19:08:03.244Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363401411757582@g.us",
+        "category": "General",
+        "priority": "Low",
+        "summary": "Inbound whatsapp message received from 120363401411757582@g.us: \"With that being said, thank you so much for what all you told about working with mental health. \n\nWh\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8172-a496-ea90d327dcb7",
+      "error": null,
+      "updatedAt": "2026-08-20T19:08:06.176Z"
+    },
+    {
+      "id": "wa_false_120363401411757582@g.us_AC936C5A1615BC0FA70DBFAE7786E515_222273231442136@lid",
+      "source": "whatsapp",
+      "sender": "120363401411757582@g.us",
+      "raw_content": "And what did it reply in case ?",
+      "received_at": "2026-08-20T19:11:09.215Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 120363401411757582@g.us",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 120363401411757582@g.us: \"And what did it reply in case ?\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c23cc96-4d1f-8126-9e8c-c61b8a7d7968",
+      "error": null,
+      "updatedAt": "2026-08-20T19:11:11.572Z"
+    },
+    {
+      "id": "wa_false_7370348429484@lid_3EB012B0F0C64F026587A4",
+      "source": "whatsapp",
+      "sender": "7370348429484@lid",
+      "raw_content": "i am planning to schedule metting on 30th of this month at 2 pm in the morning",
+      "received_at": "2026-08-20T19:14:35.125Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Meeting Request: \"i am planning to schedule metting o...\"",
+        "category": "Meeting",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 7370348429484@lid: \"i am planning to schedule metting on 30th of this month at 2 pm in the morning\".",
+        "draftResponse": "Yeah, let's schedule! I have noted this and added it to our calendar. Looking forward to connecting."
+      },
+      "notion_page_id": "3c23cc96-4d1f-811e-bc2e-e426035e4615",
+      "error": null,
+      "updatedAt": "2026-08-20T19:14:37.744Z"
+    },
+    {
+      "id": "wa_false_7370348429484@lid_3EB0311701B988BFC98562",
+      "source": "whatsapp",
+      "sender": "7370348429484@lid",
+      "raw_content": "hello i was missing u so lately and wanted to talk to u call when u are free",
+      "received_at": "2026-08-20T19:16:59.244Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Request for a Phone Call",
+        "category": "General",
+        "priority": "Low",
+        "summary": "The sender expressed that they missed the recipient and requested a phone call whenever the recipient is free.",
+        "draftResponse": "Hey! It's been a while. I'd love to catch up! I'll give you a call as soon as I'm free."
+      },
+      "notion_page_id": "3c23cc96-4d1f-81d4-9320-f5e5c5a63ffd",
+      "error": null,
+      "updatedAt": "2026-08-20T19:17:05.352Z"
+    }
+  ],
+  "idempotency_keys": {
+    "inv_approved_3c23cc96-4d1f-81c9-958d-d4191b14a8bd": {
+      "processedAt": "2026-08-20T17:58:57.709Z",
+      "invoiceName": "Invoice #INV-2026-001 (Hackathon Sponsorship)"
+    },
+    "req_approved_3c23cc96-4d1f-81ce-b38e-d0d9ffaf4783": {
+      "processedAt": "2026-08-20T18:49:23.396Z",
+      "title": "Hackathon Platinum Sponsorship Inquiry & Invoice request"
+    },
+    "req_approved_3c23cc96-4d1f-81f5-9086-e494e2e30159": {
+      "processedAt": "2026-08-20T18:59:24.627Z",
+      "title": "Meeting Request: \"ovekesh we are having metting tomma...\""
+    },
+    "req_approved_3c23cc96-4d1f-81da-b191-eae2ed79ad16": {
+      "processedAt": "2026-08-20T19:01:25.344Z",
+      "title": "WhatsApp from 120363409582504727"
+    },
+    "req_approved_3c23cc96-4d1f-8175-a034-c89d9b7478e1": {
+      "processedAt": "2026-08-20T19:02:53.675Z",
+      "title": "WhatsApp from 120363409582504727"
+    },
+    "req_approved_3c23cc96-4d1f-8128-ac80-c0cb116cd9b0": {
+      "processedAt": "2026-08-20T19:05:03.809Z",
+      "title": "WhatsApp from 120363409582504727"
+    },
+    "req_approved_3c23cc96-4d1f-8172-a496-ea90d327dcb7": {
+      "processedAt": "2026-08-20T19:09:16.116Z",
+      "title": "WhatsApp from 120363401411757582@g.us"
+    },
+    "req_approved_3c23cc96-4d1f-811e-bc2e-e426035e4615": {
+      "processedAt": "2026-08-20T19:15:31.969Z",
+      "title": "Meeting Request: \"i am planning to schedule metting o...\""
+    },
+    "req_approved_3c23cc96-4d1f-81d4-9320-f5e5c5a63ffd": {
+      "processedAt": "2026-08-20T19:17:42.063Z",
+      "title": "Request for a Phone Call"
+    }
+  },
+  "watch_state": {
+    "lastHistoryId": "1876791",
+    "watchExpiration": "1787858177538",
+    "lastRenewed": "2026-08-20T19:16:18.484Z"
+  },
+  "processed_actions": {}
+}

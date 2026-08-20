@@ -1,80 +1,191 @@
 const axios = require('axios');
 require('dotenv').config();
 
-/**
- * Parses incoming Meta WhatsApp Cloud API webhook payload
- */
-function parseWhatsAppPayload(body) {
-  try {
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
+const OPENWA_API_URL = process.env.OPENWA_API_URL || 'http://localhost:2785';
+const OPENWA_API_KEY = process.env.OPENWA_API_KEY;
+const OPENWA_SESSION_ID = process.env.OPENWA_SESSION_ID;
 
-    if (!value?.messages || value.messages.length === 0) {
+/**
+ * Normalizes phone number, group ID, or LID into proper WhatsApp chatId format
+ * Supports:
+ * - Direct contacts: 919876543210@c.us
+ * - Group chats: 120363409582504727@g.us
+ * - WhatsApp LIDs: 7370348429484@lid
+ */
+function formatChatId(recipient) {
+  if (!recipient) return null;
+  const clean = String(recipient).trim();
+  if (clean.endsWith('@c.us') || clean.endsWith('@lid') || clean.endsWith('@g.us')) {
+    return clean;
+  }
+  const digits = clean.replace(/[^\d]/g, '');
+  // WhatsApp Group IDs start with 120363 or are 17+ digits
+  if (digits.startsWith('120363') || digits.length >= 17) {
+    return `${digits}@g.us`;
+  }
+  // WhatsApp LIDs (13-16 digits without country code prefix)
+  if (digits.length >= 13 && !digits.startsWith('91') && !digits.startsWith('1')) {
+    return `${digits}@lid`;
+  }
+  return `${digits}@c.us`;
+}
+
+/**
+ * Checks if OpenWA service is healthy and connected
+ */
+async function checkOpenWAHealth() {
+  try {
+    const res = await axios.get(`${OPENWA_API_URL}/api/health`, { timeout: 4000 });
+    return { online: res.status === 200, data: res.data };
+  } catch (err) {
+    return { online: false, error: err.message };
+  }
+}
+
+/**
+ * Sends a text message via OpenWA Gateway with anti-ban debounce
+ */
+async function sendWhatsAppMessage({ to, text }) {
+  if (!to || !text) {
+    throw new Error('Missing "to" or "text" for WhatsApp message');
+  }
+
+  const chatId = formatChatId(to);
+
+  // Anti-ban simulation: slight human delay before outbound send
+  await new Promise(resolve => setTimeout(resolve, 1500));
+
+  try {
+    const endpoint = `${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/messages/send-text`;
+    const response = await axios.post(
+      endpoint,
+      {
+        chatId,
+        text
+      },
+      {
+        headers: {
+          'X-API-Key': OPENWA_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        timeout: 25000
+      }
+    );
+
+    console.log(`📤 [OpenWA] Message successfully sent to ${chatId}: "${text.slice(0, 60)}..."`);
+    return response.data;
+  } catch (err) {
+    console.error(`❌ [OpenWA] Failed sending WhatsApp message to ${chatId}:`, err.response?.data || err.message);
+    throw err;
+  }
+}
+
+/**
+ * Sends a document or media file (e.g. Invoice PDF) via OpenWA Gateway
+ */
+async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', caption = '' }) {
+  if (!to || !fileUrl) {
+    throw new Error('Missing "to" or "fileUrl" for WhatsApp media send');
+  }
+
+  const chatId = formatChatId(to);
+
+  // Anti-ban debounce
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  try {
+    // Download file buffer or pass external url depending on format
+    let base64Content = null;
+    let mimeType = 'application/pdf';
+
+    try {
+      const fileRes = await axios.get(fileUrl, { responseType: 'arraybuffer', timeout: 15000 });
+      base64Content = Buffer.from(fileRes.data, 'binary').toString('base64');
+      mimeType = fileRes.headers['content-type'] || 'application/pdf';
+    } catch (fetchErr) {
+      console.warn('⚠️ Could not download file buffer, falling back to direct URL:', fetchErr.message);
+    }
+
+    const endpoint = `${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/messages/send-media`;
+    
+    const payload = base64Content
+      ? {
+          chatId,
+          data: `data:${mimeType};base64,${base64Content}`,
+          filename,
+          caption
+        }
+      : {
+          chatId,
+          url: fileUrl,
+          filename,
+          caption
+        };
+
+    const response = await axios.post(
+      endpoint,
+      payload,
+      {
+        headers: {
+          'X-API-Key': OPENWA_API_KEY,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      }
+    );
+
+    console.log(`📄 [OpenWA] Invoice media successfully dispatched to ${chatId}`);
+    return response.data;
+  } catch (err) {
+    console.error(`❌ [OpenWA] Failed sending media to ${chatId}:`, err.response?.data || err.message);
+    throw err;
+  }
+}
+
+/**
+ * Parses incoming webhook payloads from OpenWA
+ */
+function parseOpenWAWebhook(body) {
+  try {
+    const event = body.event || body.type;
+    const data = body.data || body;
+
+    // Filter incoming message events
+    if (event && !event.includes('message')) {
       return null;
     }
 
-    const message = value.messages[0];
-    const contact = value.contacts?.[0] || {};
+    const rawSender = data.from || data.sender || data.author || '';
+    const bodyText = data.body || data.text || data.caption || '';
+    const messageId = data.id || data.messageId || `wa_${Date.now()}`;
+    const pushname = data.pushname || data.notifyName || data.name || '';
 
-    let textContent = '';
-    if (message.type === 'text') {
-      textContent = message.text?.body || '';
-    } else if (message.type === 'interactive') {
-      textContent = message.interactive?.button_reply?.title || message.interactive?.list_reply?.title || '';
-    } else if (message.type === 'button') {
-      textContent = message.button?.text || '';
-    } else {
-      textContent = `[Received ${message.type} attachment/message]`;
+    // Ignore messages sent by ourselves or empty messages
+    if (!bodyText || data.fromMe === true) {
+      return null;
     }
 
+    // Clean device instance suffix if present (e.g. 918929750553:12@c.us -> 918929750553@c.us)
+    const sender = String(rawSender).replace(/:.*@/, '@');
+    const senderName = pushname || sender.replace(/@.*$/, '');
+
     return {
-      messageId: message.id,
-      from: message.from,
-      senderName: contact.profile?.name || message.from,
-      timestamp: message.timestamp,
-      body: textContent,
-      type: message.type
+      messageId,
+      sender,
+      senderName,
+      body: bodyText,
+      raw: data
     };
-  } catch (error) {
-    console.error('❌ Failed to parse WhatsApp payload:', error.message);
+  } catch (err) {
+    console.error('❌ Error parsing OpenWA webhook:', err.message);
     return null;
   }
 }
 
-/**
- * Sends a WhatsApp message via Meta Cloud API
- */
-async function sendWhatsAppMessage({ to, text }) {
-  const { WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID } = process.env;
-
-  if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
-    console.warn('⚠️ WhatsApp credentials not configured. Simulating message dispatch.');
-    return { simulated: true, to, text };
-  }
-
-  const endpoint = `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
-
-  const response = await axios.post(
-    endpoint,
-    {
-      messaging_product: 'whatsapp',
-      to,
-      type: 'text',
-      text: { body: text }
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
-      }
-    }
-  );
-
-  return response.data;
-}
-
 module.exports = {
-  parseWhatsAppPayload,
-  sendWhatsAppMessage
+  checkOpenWAHealth,
+  sendWhatsAppMessage,
+  sendWhatsAppMedia,
+  parseOpenWAWebhook,
+  formatChatId
 };
