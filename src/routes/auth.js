@@ -308,9 +308,19 @@ router.get('/system/status', async (req, res) => {
     const waCheck = await whatsappService.checkOpenWAHealth();
     const store = storageService.getAllData();
 
+    const notionApiKey = process.env.NOTION_API_KEY || '';
+    const notionParentPage = process.env.NOTION_PARENT_PAGE_ID || '';
+    const notionParentUrl = notionParentPage
+      ? (notionParentPage.startsWith('http') ? notionParentPage : `https://notion.so/${notionParentPage}`)
+      : '';
+
     res.json({
       notion: notionCheck.success,
       notionBot: notionCheck.bot,
+      notionConfig: {
+        apiKey: notionApiKey,
+        parentPage: notionParentUrl
+      },
       openwa: waCheck.online,
       connectedAccounts: Object.keys(store.connected_accounts || {}),
       recentIncomingCount: store.incoming_items?.length || 0,

@@ -53,6 +53,13 @@ export default function App() {
       const res = await fetch('/auth/system/status');
       const data = await res.json();
       setSystemStatus(data);
+      if (data.notionConfig) {
+        setNotionSetup(prev => ({
+          ...prev,
+          apiKey: prev.apiKey || data.notionConfig.apiKey || '',
+          parentPage: prev.parentPage || data.notionConfig.parentPage || ''
+        }));
+      }
     } catch (err) {
       console.warn('System status error:', err);
     }
@@ -70,12 +77,13 @@ export default function App() {
 
   useEffect(() => {
     checkAuth();
+    fetchSystemStatus();
     const interval = setInterval(() => {
+      fetchSystemStatus();
       if (authState.authenticated) {
-        fetchSystemStatus();
         fetchWhatsAppStatus();
       }
-    }, 15000);
+    }, 12000);
     return () => clearInterval(interval);
   }, [authState.authenticated]);
 
@@ -133,15 +141,15 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#080b11] text-zinc-100 flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-black">
+    <div className="relative min-h-screen w-full bg-[#080b11] text-zinc-100 flex flex-col font-sans antialiased selection:bg-purple-500 selection:text-white">
       
-      {/* Background WebGL Plasma Shader */}
-      <div className="fixed inset-0 z-0 pointer-events-auto opacity-45">
+      {/* Background WebGL Plasma Shader in Light Purplish */}
+      <div className="fixed inset-0 z-0 pointer-events-auto opacity-55">
         <Plasma 
-          color="#0ea5e9" 
-          speed={0.4} 
-          scale={1.3} 
-          opacity={0.65} 
+          color="#c084fc" 
+          speed={0.45} 
+          scale={1.25} 
+          opacity={0.7} 
           renderScale={0.55}
           iterations={45} 
         />
@@ -243,13 +251,13 @@ export default function App() {
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            {!authState.authenticated ? (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {!authState.authenticated && (
               <a 
                 href="/auth/google/login"
-                className="px-6 py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm flex items-center gap-3 transition-all shadow-lg cursor-pointer"
+                className="px-6 py-3 rounded-lg bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm flex items-center gap-2.5 transition-all shadow-md cursor-pointer"
               >
-                <svg width="18" height="18" viewBox="0 0 18 18">
+                <svg width="16" height="16" viewBox="0 0 18 18">
                   <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.61z"/>
                   <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.92-2.26c-.8.54-1.83.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
                   <path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.96A8.996 8.996 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33z"/>
@@ -257,18 +265,13 @@ export default function App() {
                 </svg>
                 Sign in with Google
               </a>
-            ) : (
-              <div className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-medium flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Signed in as {authState.user.email}</span>
-              </div>
             )}
 
             <a 
               href="https://notion.so" 
               target="_blank" 
               rel="noreferrer"
-              className="px-5 py-3 rounded-xl border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-medium text-sm transition-all flex items-center gap-2 shadow-sm"
+              className="px-5 py-3 rounded-lg border border-zinc-700/80 bg-zinc-900/90 hover:bg-zinc-800 text-zinc-200 font-medium text-xs sm:text-sm transition-all flex items-center gap-2 shadow-sm"
             >
               <span>Open Notion Workspace</span>
               <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
