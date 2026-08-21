@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const axios = require('axios');
 
+const fs = require('fs');
 const path = require('path');
 const webhookRoutes = require('./routes/webhooks');
 const authRoutes = require('./routes/auth');
