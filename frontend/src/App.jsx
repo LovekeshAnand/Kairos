@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Plasma from './components/Plasma';
+import LegalModal from './components/LegalModal';
 import { 
   CheckCircle2, 
   ArrowRight, 
@@ -30,6 +31,7 @@ export default function App() {
   const [waLoading, setWaLoading] = useState(false);
   const [notionSetup, setNotionSetup] = useState({ apiKey: '', parentPage: '', loading: false, result: null, error: null });
   const [activeTab, setActiveTab] = useState('all');
+  const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
 
   const checkAuth = async () => {
     try {
@@ -188,6 +190,14 @@ export default function App() {
             <span>GitHub</span>
             <ExternalLink className="w-3 h-3" />
           </a>
+
+          <button
+            onClick={() => setLegalModal({ isOpen: true, tab: 'privacy' })}
+            className="hidden md:flex items-center gap-1 text-xs text-zinc-400 hover:text-cyan-400 transition-colors cursor-pointer"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Legal & Privacy</span>
+          </button>
 
           {authState.authenticated && authState.user ? (
             <div className="flex items-center gap-3 pl-3 border-l border-zinc-800">
@@ -571,9 +581,32 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-20 py-6 text-center text-xs text-zinc-500 border-t border-zinc-800/60 bg-[#080b11]/90 backdrop-blur-md">
-        Kairos Autonomous Operations Hub &bull; Backed by SQLite, Google Cloud & Notion API
+      <footer className="relative z-20 py-6 text-center text-xs text-zinc-500 border-t border-zinc-800/60 bg-[#080b11]/90 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between px-6 md:px-12 gap-4">
+        <div>
+          Kairos Autonomous Operations Hub &bull; Backed by SQLite, Google Cloud & Notion API
+        </div>
+        <div className="flex items-center gap-4 text-xs text-zinc-400">
+          <button 
+            onClick={() => setLegalModal({ isOpen: true, tab: 'terms' })}
+            className="hover:text-cyan-400 transition cursor-pointer underline"
+          >
+            Terms of Service
+          </button>
+          <span>&bull;</span>
+          <button 
+            onClick={() => setLegalModal({ isOpen: true, tab: 'privacy' })}
+            className="hover:text-cyan-400 transition cursor-pointer underline"
+          >
+            Privacy Policy
+          </button>
+        </div>
       </footer>
+
+      <LegalModal 
+        isOpen={legalModal.isOpen} 
+        onClose={() => setLegalModal({ isOpen: false, tab: 'privacy' })} 
+        defaultTab={legalModal.tab} 
+      />
 
     </div>
   );
