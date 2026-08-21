@@ -1,5 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import Plasma from './components/Plasma';
+import { 
+  CheckCircle2, 
+  ArrowRight, 
+  ExternalLink, 
+  ShieldCheck, 
+  Layers, 
+  Bot, 
+  Sparkles, 
+  LogOut, 
+  QrCode, 
+  RefreshCw, 
+  FileText, 
+  Database,
+  Mail,
+  MessageSquare,
+  FileSpreadsheet,
+  CheckSquare,
+  Inbox,
+  FolderClosed,
+  ChevronRight,
+  Info
+} from 'lucide-react';
 
 export default function App() {
   const [authState, setAuthState] = useState({ loading: true, authenticated: false, user: null });
@@ -7,9 +29,8 @@ export default function App() {
   const [waStatus, setWaStatus] = useState({ status: 'checking', phone: null, pushName: null, qr: null });
   const [waLoading, setWaLoading] = useState(false);
   const [notionSetup, setNotionSetup] = useState({ apiKey: '', parentPage: '', loading: false, result: null, error: null });
-  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
 
-  // Check auth state from SQLite session
   const checkAuth = async () => {
     try {
       const res = await fetch('/auth/me');
@@ -54,7 +75,7 @@ export default function App() {
         fetchSystemStatus();
         fetchWhatsAppStatus();
       }
-    }, 12000);
+    }, 15000);
     return () => clearInterval(interval);
   }, [authState.authenticated]);
 
@@ -62,7 +83,6 @@ export default function App() {
     try {
       await fetch('/auth/logout', { method: 'POST' });
       setAuthState({ loading: false, authenticated: false, user: null });
-      setToast({ type: 'info', message: 'You have been signed out successfully.' });
     } catch (err) {
       alert('Logout failed: ' + err.message);
     }
@@ -86,7 +106,7 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        setNotionSetup(prev => ({ ...prev, loading: false, result: 'All 5 databases initialized successfully in your Notion page!' }));
+        setNotionSetup(prev => ({ ...prev, loading: false, result: 'All 5 databases initialized and linked successfully!' }));
         fetchSystemStatus();
       } else {
         setNotionSetup(prev => ({ ...prev, loading: false, error: data.error || 'Setup failed' }));
@@ -106,7 +126,6 @@ export default function App() {
     if (!confirm('Are you sure you want to log out of WhatsApp?')) return;
     try {
       await fetch('/auth/whatsapp/disconnect', { method: 'POST' });
-      setToast({ type: 'info', message: 'WhatsApp session logged out.' });
       fetchWhatsAppStatus();
     } catch (err) {
       alert('Disconnect error: ' + err.message);
@@ -114,132 +133,123 @@ export default function App() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#07090e] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-cyan-500 selection:text-black">
+    <div className="relative min-h-screen w-full bg-[#080b11] text-zinc-100 flex flex-col font-sans antialiased selection:bg-cyan-500 selection:text-black">
       
       {/* Background WebGL Plasma Shader */}
-      <div className="fixed inset-0 z-0 pointer-events-auto opacity-70">
+      <div className="fixed inset-0 z-0 pointer-events-auto opacity-45">
         <Plasma 
-          color="#06b6d4" 
-          speed={0.65} 
-          scale={1.2} 
-          opacity={0.8} 
-          renderScale={0.6}
+          color="#0ea5e9" 
+          speed={0.4} 
+          scale={1.3} 
+          opacity={0.65} 
+          renderScale={0.55}
           iterations={45} 
         />
       </div>
 
-      {/* Floating Glassmorphic Header */}
-      <header className="relative z-20 w-full px-6 py-4 flex items-center justify-between border-b border-white/10 bg-[#07090e]/70 backdrop-blur-xl sticky top-0 shadow-2xl">
+      {/* Minimalist Professional Navbar */}
+      <nav className="relative z-30 w-full px-6 md:px-12 py-3.5 flex items-center justify-between border-b border-zinc-800/80 bg-[#080b11]/85 backdrop-blur-md sticky top-0">
         <div className="flex items-center gap-3">
           <img 
-            src="/kairos logo transparent.png" 
-            alt="Kairos Logo" 
-            className="w-10 h-10 object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" 
+            src="/kairos logo.png" 
+            alt="Kairos" 
+            className="w-8 h-8 rounded-lg object-cover border border-zinc-700/60 shadow-sm" 
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
-                KAIROS
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Operations Engine
-              </span>
-            </div>
-            <p className="text-xs text-slate-400">Autonomous AI & Notion Control Interface</p>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-base tracking-tight text-white font-mono">
+              kairos
+            </span>
+            <span className="text-[10px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+              v2.0
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            System Online (:3000)
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-300">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[11px] font-mono text-zinc-400">engine :3000</span>
           </div>
 
-          {authState.authenticated && authState.user && (
-            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+          <a 
+            href="https://github.com/LovekeshAnand/Kairos" 
+            target="_blank" 
+            rel="noreferrer"
+            className="hidden md:flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors"
+          >
+            <span>GitHub</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+
+          {authState.authenticated && authState.user ? (
+            <div className="flex items-center gap-3 pl-3 border-l border-zinc-800">
               <img 
                 src={authState.user.picture || 'https://lh3.googleusercontent.com/a/default-user'} 
-                alt="User Avatar" 
-                className="w-8 h-8 rounded-full border border-cyan-400/50 shadow-sm"
+                alt={authState.user.name} 
+                className="w-7 h-7 rounded-full border border-zinc-700 object-cover"
               />
-              <div className="hidden md:flex flex-col text-left">
-                <span className="text-xs font-semibold text-white leading-tight">{authState.user.name}</span>
-                <span className="text-[11px] text-slate-400 leading-tight">{authState.user.email}</span>
+              <div className="hidden lg:flex flex-col text-left">
+                <span className="text-xs font-medium text-zinc-200 leading-tight">{authState.user.name}</span>
+                <span className="text-[11px] text-zinc-500 leading-tight">{authState.user.email}</span>
               </div>
               <button 
                 onClick={handleLogout}
-                className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer font-medium"
+                className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border border-zinc-700 bg-zinc-900 text-zinc-400 hover:text-red-400 hover:border-red-500/40 transition-all cursor-pointer"
               >
-                Sign Out
+                <LogOut className="w-3 h-3" />
+                <span className="hidden sm:inline">Sign Out</span>
               </button>
             </div>
+          ) : (
+            <a 
+              href="/auth/google/login"
+              className="text-xs font-medium px-3 py-1.5 rounded-md bg-white text-zinc-950 hover:bg-zinc-200 transition-all flex items-center gap-1.5 shadow-sm font-sans"
+            >
+              <span>Sign In</span>
+              <ArrowRight className="w-3 h-3" />
+            </a>
           )}
         </div>
-      </header>
+      </nav>
 
-      {/* Main View Area */}
-      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center">
-
-        {/* Toast Alert */}
-        {toast && (
-          <div className="mb-6 p-4 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 flex items-center justify-between backdrop-blur-md animate-fadeIn">
-            <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} className="text-cyan-300 font-bold ml-4 cursor-pointer">✕</button>
+      {/* Main Container */}
+      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 flex flex-col gap-12">
+        
+        {/* ========================================================================= */}
+        {/* SECTION 1: HERO SECTION                                                   */}
+        {/* ========================================================================= */}
+        <section className="text-center flex flex-col items-center pt-4 pb-2">
+          
+          {/* Logo Showcase */}
+          <div className="mb-6 relative">
+            <img 
+              src="/kairos logo.png" 
+              alt="Kairos Logo" 
+              className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl mx-auto object-cover border border-zinc-700/80 shadow-2xl" 
+            />
           </div>
-        )}
 
-        {/* VIEW 1: Full-Screen Authentication Gate */}
-        {!authState.authenticated ? (
-          <div className="w-full max-w-xl mx-auto my-auto flex flex-col items-center text-center">
-            
-            <div className="w-full bg-[#0d1527]/80 border border-white/15 rounded-3xl p-8 sm:p-10 backdrop-blur-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden">
-              
-              {/* Glowing Accent Top Bar */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-blue-500"></div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 text-xs font-medium mb-4">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Autonomous AI Engine with Notion Control Interface</span>
+          </div>
 
-              {/* Logo Glow */}
-              <div className="relative mb-6">
-                <div className="absolute inset-0 bg-cyan-500/30 blur-2xl rounded-full scale-110"></div>
-                <img 
-                  src="/kairos logo transparent.png" 
-                  alt="Kairos Logo" 
-                  className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-[0_0_25px_rgba(6,182,212,0.8)] animate-pulse"
-                />
-              </div>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-3xl leading-tight sm:leading-tight mb-4">
+            Autonomous Business Operations, Staged in Notion.
+          </h1>
 
-              <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
-                Welcome to Kairos
-              </h2>
-              <p className="text-sm text-slate-300 mb-8 max-w-md mx-auto leading-relaxed">
-                Connect your business communication channels with 1-click Google Sign-in to enable autonomous Gmail, WhatsApp, and Notion operations.
-              </p>
+          <p className="text-sm sm:text-base text-zinc-400 max-w-2xl leading-relaxed mb-8">
+            Kairos continuously ingests, classifies, and drafts responses for your Gmail, WhatsApp, and meeting transcripts. You review and approve inside Notion — Kairos executes the real-world dispatch.
+          </p>
 
-              {/* Feature Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mb-8 text-xs text-slate-300">
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                  <span className="text-cyan-400 text-base">✉️</span>
-                  <span><strong>Unified Gmail AI</strong><br/><span className="text-slate-400">Real-time Pub/Sub sync</span></span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                  <span className="text-emerald-400 text-base">💬</span>
-                  <span><strong>WhatsApp Gateway</strong><br/><span className="text-slate-400">Anti-ban & group support</span></span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                  <span className="text-purple-400 text-base">📑</span>
-                  <span><strong>5 Notion Databases</strong><br/><span className="text-slate-400">Human approval gates</span></span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
-                  <span className="text-blue-400 text-base">🗄️</span>
-                  <span><strong>SQLite Persistence</strong><br/><span className="text-slate-400">Isolated multi-tenant data</span></span>
-                </div>
-              </div>
-
-              {/* Sign in with Google Button */}
+          {/* Action CTAs */}
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {!authState.authenticated ? (
               <a 
                 href="/auth/google/login"
-                className="w-full py-4 px-6 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-base flex items-center justify-center gap-3 transition-all duration-200 transform hover:-translate-y-0.5 shadow-[0_10px_25px_rgba(255,255,255,0.2)] cursor-pointer"
+                className="px-6 py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-sm flex items-center gap-3 transition-all shadow-lg cursor-pointer"
               >
-                <svg width="20" height="20" viewBox="0 0 18 18">
+                <svg width="18" height="18" viewBox="0 0 18 18">
                   <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.61z"/>
                   <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.92-2.26c-.8.54-1.83.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
                   <path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.96A8.996 8.996 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33z"/>
@@ -247,223 +257,319 @@ export default function App() {
                 </svg>
                 Sign in with Google
               </a>
+            ) : (
+              <div className="px-5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Signed in as {authState.user.email}</span>
+              </div>
+            )}
 
-              <p className="text-[11px] text-slate-400 mt-4">
-                Grants identity verification and Gmail API permissions in one unified step.
-              </p>
+            <a 
+              href="https://notion.so" 
+              target="_blank" 
+              rel="noreferrer"
+              className="px-5 py-3 rounded-xl border border-zinc-700 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-medium text-sm transition-all flex items-center gap-2 shadow-sm"
+            >
+              <span>Open Notion Workspace</span>
+              <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+            </a>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-3xl mt-12 text-left">
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
+              <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-0.5">Flow A</span>
+              <span className="font-semibold text-xs text-zinc-100 flex items-center gap-1.5">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" /> Invoices & PDFs
+              </span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
+              <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-0.5">Flow B</span>
+              <span className="font-semibold text-xs text-zinc-100 flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5 text-purple-400" /> Meet Transcripts
+              </span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
+              <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-0.5">Flow C</span>
+              <span className="font-semibold text-xs text-zinc-100 flex items-center gap-1.5">
+                <Inbox className="w-3.5 h-3.5 text-emerald-400" /> WhatsApp & Gmail
+              </span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md">
+              <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-0.5">Security</span>
+              <span className="font-semibold text-xs text-zinc-100 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-cyan-400" /> SQLite Tenancy
+              </span>
             </div>
           </div>
-        ) : (
+        </section>
 
-          /* VIEW 2: Authenticated Operations Hub */
-          <div className="flex flex-col gap-6 animate-fadeIn">
+        {/* ========================================================================= */}
+        {/* SECTION 2: STEP-BY-STEP SETUP & ONBOARDING WORKFLOW                       */}
+        {/* ========================================================================= */}
+        <section className="flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                Setup & Operational Controls
+              </h2>
+              <p className="text-xs text-zinc-400">Complete the 3 quick steps below to connect all your business communication channels.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Dashboard Hero Banner */}
-            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#121c33]/90 via-[#0e1628]/90 to-[#16122d]/90 border border-white/15 backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            {/* STEP 1: Google Authentication */}
+            <div className="p-6 rounded-2xl bg-zinc-900/70 border border-zinc-800 backdrop-blur-xl flex flex-col justify-between shadow-xl">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">
-                  Operations & Channel Hub
-                </h2>
-                <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-                  Your business communication channels are connected. Notion acts as your human review interface while Kairos executes autonomous background workflows.
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-wider">Step 1</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                    authState.authenticated ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-zinc-800 text-zinc-400'
+                  }`}>
+                    {authState.authenticated ? 'Connected' : 'Pending'}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-cyan-400" /> Google Sign-in
+                </h3>
+                <p className="text-xs text-zinc-400 leading-relaxed mb-4">
+                  Authenticates your identity and grants permissions for automated Gmail ingestion and draft response dispatch in a single step.
                 </p>
+
+                {authState.authenticated && authState.user && (
+                  <div className="p-3 rounded-lg bg-zinc-950/80 border border-zinc-800 text-xs text-zinc-300 font-mono mb-4">
+                    Active: {authState.user.email}
+                  </div>
+                )}
               </div>
-              <a 
-                href="https://notion.so" 
-                target="_blank" 
-                rel="noreferrer"
-                className="px-5 py-2.5 rounded-xl border border-cyan-400/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold text-sm transition-all whitespace-nowrap shadow-lg"
-              >
-                📑 Open Notion Workspace ↗
-              </a>
+
+              {!authState.authenticated ? (
+                <a 
+                  href="/auth/google/login"
+                  className="w-full py-2.5 rounded-lg bg-white hover:bg-zinc-100 text-zinc-950 font-semibold text-xs text-center transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span>Connect with Google</span>
+                  <ArrowRight className="w-3 h-3" />
+                </a>
+              ) : (
+                <a 
+                  href="/auth/google/login"
+                  className="w-full py-2 rounded-lg border border-zinc-700 hover:bg-zinc-800 text-zinc-300 text-xs text-center transition-all cursor-pointer"
+                >
+                  Switch Account
+                </a>
+              )}
             </div>
 
-            {/* 3-Column Onboarding & Management Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Card 1: 1-Click Notion Setup Wizard */}
-              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-blue-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                      <span className="text-xl">📑</span> 1-Click Notion Setup
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                      Ready
-                    </span>
+            {/* STEP 2: Notion Operations Hub Setup */}
+            <div className="p-6 rounded-2xl bg-zinc-900/70 border border-zinc-800 backdrop-blur-xl flex flex-col justify-between shadow-xl md:col-span-2">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] font-mono font-bold text-purple-400 uppercase tracking-wider">Step 2</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    Notion Engine
+                  </span>
+                </div>
+                
+                <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-purple-400" /> 1-Click Notion Operations Hub Setup
+                </h3>
+                <p className="text-xs text-zinc-400 mb-4">
+                  Constructs and links all 5 operational databases inside your own Notion workspace.
+                </p>
+
+                {/* Notion Page Creation Guide Box */}
+                <div className="p-3.5 rounded-xl bg-zinc-950/90 border border-zinc-800/80 mb-4 text-xs">
+                  <div className="flex items-center gap-1.5 font-semibold text-zinc-200 mb-2 text-[11px]">
+                    <Info className="w-3.5 h-3.5 text-purple-400" /> How to create your Notion page:
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                    Instantly construct and link your 5 operational databases inside your Notion workspace.
-                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-zinc-400 text-[11px] leading-relaxed">
+                    <li>Open Notion and create an empty page titled <strong className="text-zinc-200">"Kairos Operations Hub"</strong>.</li>
+                    <li>Click <strong className="text-zinc-200">Share</strong> (or •••) &gt; <strong className="text-zinc-200">Add connections</strong> &gt; Select your Kairos Integration.</li>
+                    <li>Copy your page URL from your browser address bar and paste it below.</li>
+                  </ol>
+                </div>
 
-                  <form onSubmit={handleNotionSetup} className="space-y-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                        Notion Secret Token
-                      </label>
-                      <input 
-                        type="password"
-                        placeholder="ntn_..."
-                        value={notionSetup.apiKey}
-                        onChange={e => setNotionSetup(prev => ({ ...prev, apiKey: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                        Parent Page URL
-                      </label>
-                      <input 
-                        type="text"
-                        placeholder="https://notion.so/Kairos-Hub-..."
-                        value={notionSetup.parentPage}
-                        onChange={e => setNotionSetup(prev => ({ ...prev, parentPage: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                      />
-                    </div>
+                <form onSubmit={handleNotionSetup} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Notion Secret Token
+                    </label>
+                    <input 
+                      type="password"
+                      placeholder="ntn_..."
+                      value={notionSetup.apiKey}
+                      onChange={e => setNotionSetup(prev => ({ ...prev, apiKey: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 font-mono"
+                    />
+                  </div>
 
-                    {notionSetup.error && (
-                      <p className="text-xs text-red-400">{notionSetup.error}</p>
-                    )}
-                    {notionSetup.result && (
-                      <p className="text-xs text-emerald-400 font-medium">{notionSetup.result}</p>
-                    )}
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                      Parent Page URL
+                    </label>
+                    <input 
+                      type="text"
+                      placeholder="https://notion.so/Kairos-Operations-Hub-..."
+                      value={notionSetup.parentPage}
+                      onChange={e => setNotionSetup(prev => ({ ...prev, parentPage: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
 
+                  <div className="sm:col-span-2">
+                    {notionSetup.error && <p className="text-xs text-red-400 mb-2">{notionSetup.error}</p>}
+                    {notionSetup.result && <p className="text-xs text-emerald-400 mb-2 font-medium">{notionSetup.result}</p>}
                     <button 
                       type="submit"
                       disabled={notionSetup.loading}
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide transition-all shadow-md cursor-pointer disabled:opacity-50"
+                      className="w-full py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs tracking-wide transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {notionSetup.loading ? '⏳ Constructing 5 Databases...' : '⚡ Auto-Create All 5 Databases'}
+                      <Sparkles className="w-3.5 h-3.5" />
+                      {notionSetup.loading ? 'Constructing 5 Databases...' : 'Auto-Create All 5 Notion Databases'}
                     </button>
-                  </form>
-                </div>
-              </div>
-
-              {/* Card 2: Gmail Integration Status */}
-              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-cyan-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                      <span className="text-xl">✉️</span> Gmail Integration
-                    </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      Connected
-                    </span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                    Active Google Cloud Pub/Sub & 20s polling listener. Analyzes incoming emails, discards marketing spam, and stages replies in Notion.
-                  </p>
-
-                  <div className="p-3 rounded-xl bg-black/30 border border-white/10 text-xs text-cyan-300 mb-4 font-mono">
-                    Active Mailbox: {authState.user.email}
-                  </div>
-                </div>
-
-                <a 
-                  href="/auth/google/login"
-                  className="w-full py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-slate-200 font-semibold text-xs text-center transition-all cursor-pointer"
-                >
-                  🔄 Switch / Re-Authenticate Account
-                </a>
+                </form>
               </div>
+            </div>
 
-              {/* Card 3: WhatsApp Web Gateway */}
-              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-emerald-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
+            {/* STEP 3: WhatsApp Web Gateway */}
+            <div className="p-6 rounded-2xl bg-zinc-900/70 border border-zinc-800 backdrop-blur-xl flex flex-col justify-between shadow-xl md:col-span-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
-                      <span className="text-xl">💬</span> WhatsApp Gateway
-                    </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border ${
-                      waStatus.phone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] font-mono font-bold text-emerald-400 uppercase tracking-wider">Step 3</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                      waStatus.phone ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                     }`}>
-                      {waStatus.phone ? 'Connected' : 'Scan Required'}
+                      {waStatus.phone ? 'Paired' : 'Scan Required'}
                     </span>
                   </div>
-
-                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                    Self-hosted OpenWA Web Anti-Ban Gateway on port 2785. Supports direct chats, WhatsApp groups, and media documents.
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-emerald-400" /> WhatsApp Anti-Ban Gateway (OpenWA)
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Connect your WhatsApp device to ingest 1-on-1 chats and group messages directly into Notion with AI draft replies.
                   </p>
-
-                  {waStatus.phone ? (
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 font-mono mb-4">
-                      Paired Device: {waStatus.pushName || 'WhatsApp User'} (+{waStatus.phone})
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center my-3">
-                      <div className="p-3 bg-white rounded-xl shadow-lg inline-block">
-                        <img 
-                          src={`/auth/whatsapp/qr.png?t=${Date.now()}`} 
-                          alt="WhatsApp QR Code" 
-                          className="w-36 h-36 object-contain"
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-400 mt-2">
-                        Scan with <strong>WhatsApp &gt; Linked Devices</strong>
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={handleConnectWhatsApp}
                     disabled={waLoading}
-                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {waLoading ? '⏳ Checking QR...' : '🔄 Refresh WhatsApp Connection'}
+                    <RefreshCw className={`w-3.5 h-3.5 ${waLoading ? 'animate-spin' : ''}`} />
+                    <span>{waLoading ? 'Checking...' : 'Refresh Status'}</span>
                   </button>
                   {waStatus.phone && (
                     <button 
                       onClick={handleDisconnectWhatsApp}
-                      className="w-full py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs transition-all cursor-pointer"
+                      className="px-3 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs transition-all cursor-pointer"
                     >
-                      🔌 Disconnect WhatsApp
+                      Disconnect
                     </button>
                   )}
                 </div>
               </div>
 
-            </div>
-
-            {/* 5-Database Infrastructure Matrix */}
-            <div className="mt-4">
-              <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <span>🗄️</span> 5 Operational Databases
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                  <h4 className="font-bold text-xs text-white mb-1">📗 Run Log</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">Real-time audit records & diagnostic traces.</p>
+              {waStatus.phone ? (
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 font-mono flex items-center justify-between">
+                  <span>Paired Device: <strong>{waStatus.pushName || 'WhatsApp User'}</strong> (+{waStatus.phone})</span>
+                  <span className="text-emerald-400 text-[11px]">Ready for Webhook Dispatch</span>
                 </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                  <h4 className="font-bold text-xs text-white mb-1">📄 Invoices</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">Flow A: Invoicing, approval gates & PDF dispatch.</p>
+              ) : (
+                <div className="p-6 rounded-xl bg-zinc-950/80 border border-zinc-800 flex flex-col items-center text-center">
+                  <div className="p-2.5 bg-white rounded-xl shadow-lg inline-block mb-3">
+                    <img 
+                      src={`/auth/whatsapp/qr.png?t=${Date.now()}`} 
+                      alt="WhatsApp QR Code" 
+                      className="w-40 h-40 object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-zinc-300 font-medium">
+                    Open WhatsApp on your phone &gt; Settings &gt; <strong>Linked Devices</strong> &gt; Scan QR Code
+                  </p>
                 </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                  <h4 className="font-bold text-xs text-white mb-1">✅ Tasks</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">Flow B: Meeting action items & assignee routing.</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                  <h4 className="font-bold text-xs text-white mb-1">📥 Requests</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">Flow C: Inbound communications & draft responses.</p>
-                </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
-                  <h4 className="font-bold text-xs text-white mb-1">📂 Documents</h4>
-                  <p className="text-[11px] text-slate-400 leading-snug">Central asset storage from WhatsApp & Email.</p>
-                </div>
-              </div>
+              )}
             </div>
 
           </div>
-        )}
+        </section>
+
+        {/* ========================================================================= */}
+        {/* SECTION 3: 5 CONNECTED NOTION DATABASES MATRIX                            */}
+        {/* ========================================================================= */}
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                Notion Operational Databases
+              </h2>
+              <p className="text-xs text-zinc-400">5 interconnected databases mapped directly to your Notion workspace.</p>
+            </div>
+            <a 
+              href="https://notion.so" 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"
+            >
+              <span>View in Notion</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700 transition-all">
+              <div className="flex items-center gap-2 text-emerald-400 mb-2">
+                <Database className="w-4 h-4" />
+                <h4 className="font-bold text-xs text-white">Run Log</h4>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-snug">Immutable execution trace and diagnostic timeline.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700 transition-all">
+              <div className="flex items-center gap-2 text-blue-400 mb-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                <h4 className="font-bold text-xs text-white">Invoices</h4>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-snug">Flow A: Invoice staging, approval gate & PDF dispatch.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700 transition-all">
+              <div className="flex items-center gap-2 text-purple-400 mb-2">
+                <CheckSquare className="w-4 h-4" />
+                <h4 className="font-bold text-xs text-white">Tasks</h4>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-snug">Flow B: Meeting action items & assignee routing.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700 transition-all">
+              <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                <Inbox className="w-4 h-4" />
+                <h4 className="font-bold text-xs text-white">Requests</h4>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-snug">Flow C: Inbound emails, WhatsApp chats & AI draft responses.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-md hover:border-zinc-700 transition-all">
+              <div className="flex items-center gap-2 text-amber-400 mb-2">
+                <FolderClosed className="w-4 h-4" />
+                <h4 className="font-bold text-xs text-white">Documents</h4>
+              </div>
+              <p className="text-[11px] text-zinc-400 leading-snug">Central asset archive for inbound WhatsApp and Email files.</p>
+            </div>
+
+          </div>
+        </section>
 
       </main>
 
       {/* Footer */}
-      <footer className="relative z-20 py-4 text-center text-xs text-slate-500 border-t border-white/10 bg-[#07090e]/80 backdrop-blur-md">
-        Kairos Autonomous Operations Hub &bull; Powered by React, Vite, WebGL & Notion API
+      <footer className="relative z-20 py-6 text-center text-xs text-zinc-500 border-t border-zinc-800/60 bg-[#080b11]/90 backdrop-blur-md">
+        Kairos Autonomous Operations Hub &bull; Backed by SQLite, Google Cloud & Notion API
       </footer>
 
     </div>
