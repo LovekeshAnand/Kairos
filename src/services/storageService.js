@@ -119,6 +119,10 @@ function updateWatchState(updates) {
 }
 
 module.exports = {
+  readStore,
+  writeStore,
+  getAllData: readStore,
+  saveAllData: writeStore,
   isProcessed,
   markProcessed,
   saveIncomingItem,

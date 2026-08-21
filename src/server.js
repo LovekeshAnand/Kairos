@@ -4,7 +4,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const axios = require('axios');
 
+const path = require('path');
 const webhookRoutes = require('./routes/webhooks');
+const authRoutes = require('./routes/auth');
 const notionService = require('./services/notionService');
 const pipelineService = require('./services/pipelineService');
 const whatsappService = require('./services/whatsappService');
@@ -18,6 +20,7 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Health Check Endpoint
 app.get('/health', async (req, res) => {
@@ -39,6 +42,7 @@ app.get('/health', async (req, res) => {
 
 // Mount Routes
 app.use('/webhooks', webhookRoutes);
+app.use('/auth', authRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
@@ -114,7 +118,18 @@ if (require.main === module) {
     // 4. Start Background State Engine (checks approvals every 15s)
     pipelineService.startBackgroundPoller(15000);
 
-    // 5. Gmail Watch 5-Day Renewal Cron
+    // 5. Background Gmail Inbox Poller (every 20s for real-time inbox ingestion)
+    if (process.env.GMAIL_REFRESH_TOKEN) {
+      setInterval(async () => {
+        try {
+          await gmailService.fetchAndProcessLatestEmails(5);
+        } catch (err) {
+          // Quiet background sync
+        }
+      }, 20000);
+    }
+
+    // 6. Gmail Watch 5-Day Renewal Cron
     setInterval(async () => {
       console.log('🔄 [Gmail] Running periodic 5-day watch renewal...');
       await gmailService.startGmailWatch();

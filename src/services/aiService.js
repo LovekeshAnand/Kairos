@@ -109,23 +109,25 @@ function cleanAndParseJSON(rawText) {
 }
 
 /**
- * Structure & Categorize Inbound Email
+ * Structure & Categorize Inbound Email with Spam / Newsletter Filter
  */
 async function structureEmail({ sender, subject = '', body = '' }) {
   const prompt = `
-Analyze the incoming email below. Categorize it, prioritize it, summarize it, and generate a professional draft reply.
-If it is spam, promotion, or bot noise, set "isNoise": true.
+Analyze the incoming email below.
+1. Determine if this email is promotional marketing, a newsletter, automated digest (e.g. NYTimes, job boards, alerts), or spam. If so, set "isNoise": true with a clear "noiseReason".
+2. If it is an authentic business, client, or actionable email, categorize it, determine priority, generate a clear 1-sentence English summary, and write a professional draft reply.
 
 Sender: ${sender}
 Subject: ${subject}
 Body:
 """
-${body}
+${body.slice(0, 3000)}
 """
 
 Respond with a JSON object strictly matching this schema:
 {
   "isNoise": boolean,
+  "noiseReason": "marketing_newsletter" | "automated_digest" | "trivial_spam" | "none",
   "title": "Short descriptive title (max 10 words)",
   "category": "Support" | "Billing" | "Meeting" | "General" | "Urgent",
   "priority": "Low" | "Medium" | "High",
@@ -144,18 +146,21 @@ Respond with a JSON object strictly matching this schema:
 }
 
 /**
- * Structure & Categorize Inbound WhatsApp Message (Supports Multilingual & Hinglish)
+ * Structure & Categorize Inbound WhatsApp Message (Supports Groups, LIDs, Hinglish & Spam Filter)
  */
-async function structureWhatsApp({ sender, body = '' }) {
+async function structureWhatsApp({ sender, body = '', isGroup = false }) {
   const prompt = `
-Analyze the incoming WhatsApp message below. It may be written in English, Hindi, Hinglish (e.g. "bhai sunday ko 4 baje meeting rakh le"), or other languages.
-1. Understand the true intent (e.g., scheduling a meeting, asking for an invoice, seeking support, or general chat).
-2. Extract the key request into a clean, professional English title and summary.
-3. If it is a meeting request, set category to "Meeting", extract the proposed time/day into the summary, and draft a friendly, enthusiastic confirmation response (e.g., "Yeah, let's schedule! I have noted the meeting for [time/day]. See you then!").
-4. If it is trivial chatter ("ok", "k", spam), set "isNoise": true.
+Analyze the incoming WhatsApp message below. It may come from a direct contact or a group chat (${isGroup ? 'GROUP CHAT' : 'DIRECT CHAT'}).
+1. SPAM / NOISE FILTER RULES:
+   - If from a GROUP CHAT: Casual chat, gaming chatter ("counter strike", "game hai"), casual banter, meme reactions, "@all", "@everyone", "lol", "hahaha", "bro ppt kha...", "why you sweating", or general idle group conversation MUST be marked as "isNoise": true.
+   - If from a DIRECT CHAT: Casual single-word greetings or trivial acknowledgments ("ok", "k", "thanks", "gm", "gn", "hello", "hi", "bye", "cool", "alright") with no actionable question or task MUST be marked as "isNoise": true.
+2. ACTIONABLE MESSAGES:
+   - If the message is an explicit meeting request (e.g. "schedule a meeting for 4 PM", "bhai kal 4 baje milte hain"), an invoice/payment request, a technical support issue, or an urgent business inquiry, set "isNoise": false.
+3. If it is a meeting request, set category to "Meeting", extract the proposed time/day, and draft a friendly confirmation reply.
 
 Sender: ${sender}
-Message:
+Chat Type: ${isGroup ? 'Group Conversation' : 'Direct Message'}
+Message Content:
 """
 ${body}
 """
@@ -163,11 +168,12 @@ ${body}
 Respond with a JSON object strictly matching this schema:
 {
   "isNoise": boolean,
+  "noiseReason": "group_casual_chatter" | "trivial_acknowledgment" | "spam_meme" | "none",
   "title": "Short descriptive title in English (max 8 words)",
   "category": "Meeting" | "Support" | "Billing" | "General" | "Urgent",
   "priority": "Low" | "Medium" | "High",
   "summary": "1-2 sentence clear summary in English explaining what the sender requested",
-  "draftResponse": "Natural, friendly draft response (e.g., 'Yeah, let's schedule for Sunday at 4:00 PM!')"
+  "draftResponse": "Natural, friendly draft response"
 }
 `;
 
@@ -176,7 +182,7 @@ Respond with a JSON object strictly matching this schema:
     return result;
   } catch (err) {
     console.warn('⚠️ OpenRouter unavailable, using heuristic fallback:', err.message);
-    return heuristicFallback({ sender, subject: '', body, source: 'whatsapp' });
+    return heuristicFallback({ sender, subject: '', body, source: 'whatsapp', isGroup });
   }
 }
 
@@ -231,12 +237,40 @@ Respond with a JSON object strictly matching this schema:
 }
 
 /**
- * Robust Heuristic Fallback Engine (Zero crashes when offline / rate-limited)
+ * Robust Heuristic Fallback Engine with Intelligent Noise & Spam Filter
  */
-function heuristicFallback({ sender, subject = '', body = '', source = 'email' }) {
-  const text = `${subject} ${body}`.toLowerCase();
+function heuristicFallback({ sender, subject = '', body = '', source = 'email', isGroup = false }) {
+  const text = `${subject} ${body}`.toLowerCase().trim();
   
-  // Priority detection
+  // 1. Group Casual Chatter & Trivial Message Detection
+  const isTrivialAck = text.match(/^(ok|k|okay|thanks|thx|thank you|cool|alright|nice|done|got it|gm|gn|good morning|good night|hello|hi|hey|bye|yo|haha|hahaha|lol|lmao|xd|👍|🙏|❤️|🔥|@all|@everyone)$/i);
+  const isCasualGroupTalk = isGroup && (
+    text.match(/\b(counter strike|csgo|game|game hai|khelte|khel|sweating|bro ppt|kha submit|chalo|bhai|bhaiya ji|kinda motivated)\b/i) ||
+    (text.length < 25 && !text.match(/\b(meeting|call|invoice|bill|urgent|schedule|asap)\b/i))
+  );
+
+  // Check if sender is an automated notification service, newsletter, or platform digest
+  const isAutomatedService = sender.match(/(noreply|no-reply|notifications|invitations|welcome|digest|news|newsletter|updates|alerts|editorpicks|support@.*\.com|hello@students|@medium\.com|@substack\.com|@devpost\.com|@spotify\.com|@linkedin\.com|@unstop\.news|@nytimes\.com|@accounts\.google\.com|@google\.com)/i);
+
+  const isPromoOrDigestText = text.match(/\b(unsubscribe|view this email in your browser|daily digest|weekly digest|job alert|invitation to connect|hackathon|special offer|promotions|deals|privacy policy|terms of service)\b/i);
+
+  const isActionablePersonal = !isAutomatedService && text.match(/\b(invoice|bill|payment|document|doc|pdf|receipt|contract|proposal|salary|help|request|send|meet|meeting|schedule|call|project|task|please)\b/i);
+
+  let isNoise = false;
+  let noiseReason = 'none';
+
+  if (isTrivialAck) {
+    isNoise = true;
+    noiseReason = 'trivial_acknowledgment';
+  } else if (isCasualGroupTalk) {
+    isNoise = true;
+    noiseReason = 'group_casual_chatter';
+  } else if (source === 'email' && (isAutomatedService || isPromoOrDigestText) && !isActionablePersonal) {
+    isNoise = true;
+    noiseReason = isAutomatedService ? 'automated_digest' : 'marketing_promotion';
+  }
+
+  // 2. Priority detection
   let priority = 'Medium';
   if (text.match(/\b(urgent|asap|emergency|immediately|deadline|critical|blocked|jaldi|turant)\b/i)) {
     priority = 'High';
@@ -244,7 +278,7 @@ function heuristicFallback({ sender, subject = '', body = '', source = 'email' }
     priority = 'Low';
   }
 
-  // Category detection (English + Hindi + Hinglish)
+  // 3. Category detection (English + Hindi + Hinglish)
   let category = 'General';
   let isMeeting = false;
   
@@ -257,9 +291,7 @@ function heuristicFallback({ sender, subject = '', body = '', source = 'email' }
     category = 'Support';
   }
 
-  const isNoise = body.trim().length < 3 && !subject;
   let title = subject || `${source === 'email' ? 'Email' : 'WhatsApp'} from ${sender}`;
-  
   if (isMeeting) {
     title = `Meeting Request: "${body.slice(0, 35)}..."`;
   }
@@ -271,6 +303,7 @@ function heuristicFallback({ sender, subject = '', body = '', source = 'email' }
 
   return {
     isNoise,
+    noiseReason,
     title: title.slice(0, 60),
     category,
     priority,
@@ -283,6 +316,8 @@ module.exports = {
   callOpenRouter,
   structureEmail,
   structureWhatsApp,
-  structureTranscript
+  structureTranscript,
+  heuristicFallback
 };
+
 

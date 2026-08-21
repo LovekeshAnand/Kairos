@@ -102,10 +102,12 @@ Kairos/
 │   ├── test-pipeline.js          # Full 5-step system validation
 │   ├── test-flow-a.js            # Invoice → Approval → WhatsApp
 │   ├── test-notion.js            # Notion connectivity check
-│   └── test-webhooks.js          # Live endpoint simulation
+│   ├── test-webhooks.js          # Live endpoint simulation
+│   └── test-gmail-all.js         # Comprehensive Gmail suite (watch, send, push)
 │
 ├── scripts/
-│   └── init-notion-databases.js  # Create all 4 Notion databases
+│   ├── init-notion-databases.js  # Create all 4 Notion databases
+│   └── sync-gmail.js             # Manually sync latest Gmail emails into Notion
 │
 ├── docs/
 │   ├── project-guide.md          # Full hackathon project blueprint
@@ -266,6 +268,8 @@ npm run test:all        # Full 5-step system validation (Notion, AI, Flows B & C
 npm run test:notion     # Notion connectivity + Run Log write
 npm run test:flow-a     # Flow A: Invoice → Approval → WhatsApp
 npm run test:webhooks   # Simulate all 3 flows via HTTP (server must be running)
+npm run test:gmail      # Comprehensive Gmail suite (watch, send, push simulation)
+npm run sync:gmail      # Manually sync latest 5 Gmail inbox messages to Notion
 ```
 
 ---

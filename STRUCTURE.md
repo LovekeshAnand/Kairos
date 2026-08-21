@@ -21,28 +21,32 @@ d:\Kairos\
 ├── 📄 SETUP_GUIDE.md               # Step-by-step developer onboarding & Notion setup guide
 ├── 📄 PROGRESS_AND_GMAIL_GUIDE.md  # Current project status & multi-user Gmail roadmap
 │
-├── 📂 src/                         # Core Application Engine
-│   ├── 📄 server.js                # Express server — startup, routes, health, watch renewal
-│   │
+├── 📂 src/                         # Core engine source code
+│   ├── 📄 server.js                # Express web server & poller starter
+│   ├── 📂 public/                  # Web Onboarding & Control Dashboard
+│   │   └── 📄 index.html           # 1-click Google OAuth + WhatsApp QR Scanner
 │   ├── 📂 routes/
-│   │   └── 📄 webhooks.js          # All inbound webhook endpoints (Gmail, WhatsApp, Transcript, Simulate)
-│   │
+│   │   ├── 📄 webhooks.js          # Webhook receivers (Gmail, WhatsApp, Transcripts)
+│   │   └── 📄 auth.js              # Google OAuth login/callback & WhatsApp status
 │   └── 📂 services/
-│       ├── 📄 notionService.js     # All 4 Notion database R/W operations + Run Log writer
-│       ├── 📄 aiService.js         # OpenRouter multi-key AI engine + heuristic fallback
-│       ├── 📄 whatsappService.js   # OpenWA gateway client (send text, send media, parse webhooks)
-│       ├── 📄 gmailService.js      # Gmail OAuth2 + Pub/Sub history tracking + send email
-│       ├── 📄 pipelineService.js   # Flow A, B, C orchestration + background state poller
+│       ├── 📄 notionService.js     # All 5 Notion databases (including Documents DB) + Run Log
+│       ├── 📄 aiService.js         # Multilingual AI engine + Group Spam/Noise Filter
+│       ├── 📄 whatsappService.js   # OpenWA gateway client (text, media, QR status)
+│       ├── 📄 gmailService.js      # Gmail OAuth2 + Pub/Sub + send email
+│       ├── 📄 pipelineService.js   # Flow A, B, C orchestration + Human Response overrides
 │       └── 📄 storageService.js    # Durable local JSON store + idempotency cache
 │
 ├── 📂 tests/                       # All verification and simulation tests
-│   ├── 📄 test-pipeline.js         # Full 5-step system validation test (Notion, AI, Flows B & C)
-│   ├── 📄 test-flow-a.js           # Flow A end-to-end: Invoice create → approval → WhatsApp dispatch
+│   ├── 📄 test-v2-features.js      # V2 suite: Documents DB, Group Spam Filter, Human Override
+│   ├── 📄 test-pipeline.js         # Full 5-step system validation test
+│   ├── 📄 test-flow-a.js           # Flow A end-to-end: Invoice create → approval → WhatsApp
 │   ├── 📄 test-notion.js           # Standalone Notion connectivity + Run Log write test
-│   └── 📄 test-webhooks.js         # Live webhook endpoint simulation tests (requires server running)
+│   ├── 📄 test-webhooks.js         # Live webhook endpoint simulation tests
+│   └── 📄 test-gmail-all.js        # Comprehensive Gmail suite: watch(), outbound send, and push
 │
 ├── 📂 scripts/                     # Setup and utility scripts
-│   └── 📄 init-notion-databases.js # Creates all 4 Notion databases under the parent page
+│   ├── 📄 init-notion-databases.js # Creates all 4 Notion databases under the parent page
+│   └── 📄 sync-gmail.js            # Standalone manual inbox sync script (fetches & stages into Notion)
 │
 ├── 📂 docs/                        # Project documentation and specifications
 │   ├── 📄 project-guide.md         # Full hackathon project blueprint (Phases, Schemas, Flows)
@@ -178,6 +182,8 @@ WhatsApp Event    → POST /webhooks/whatsapp
 | `npm run test:notion` | Standalone Notion connectivity test |
 | `npm run test:flow-a` | Flow A end-to-end: Invoice → Approval → WhatsApp |
 | `npm run test:webhooks` | Simulate all 3 flows via HTTP (server must be running) |
+| `npm run test:gmail` | Comprehensive Gmail suite (watch, send, push simulation) |
+| `npm run sync:gmail` | Manually sync latest Gmail inbox messages to Notion |
 | `npm run setup:notion` | Initialize all 4 Notion databases |
 
 ---

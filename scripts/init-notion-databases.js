@@ -1,9 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import dotenv from 'dotenv';
-
-// Load .env
-dotenv.config();
+const fs = require('fs');
+const path = require('path');
+require('dotenv').config();
 
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const PARENT_PAGE_ID = process.env.NOTION_PARENT_PAGE_ID || '3c23cc964d1f80059d16f84a5264f066';
@@ -190,14 +187,83 @@ async function initNotionDatabases() {
           ]
         }
       },
-      'Summary': { rich_text: {} }
+      'Summary': { rich_text: {} },
+      'Human Response': { rich_text: {} }
     }
   });
   results.NOTION_REQUESTS_DB_ID = requestsDb.id;
   console.log('-> Requests / Reminders DB ID:', requestsDb.id);
 
-  console.log('\nAll 4 Notion databases successfully created:');
+  // 5. Documents Database (Central Document Asset Repository)
+  console.log("Creating 'Documents' Database...");
+  const documentsDb = await notionRequest('databases', 'POST', {
+    parent: { type: 'page_id', page_id: PARENT_PAGE_ID },
+    title: [{ type: 'text', text: { content: 'Documents' } }],
+    properties: {
+      'Document Name': { title: {} },
+      'File': { files: {} },
+      'Source': {
+        select: {
+          options: [
+            { name: 'whatsapp', color: 'green' },
+            { name: 'email', color: 'blue' },
+            { name: 'manual', color: 'orange' }
+          ]
+        }
+      },
+      'Sender': { rich_text: {} },
+      'Sender Name': { rich_text: {} },
+      'Category': {
+        select: {
+          options: [
+            { name: 'Invoice', color: 'purple' },
+            { name: 'Contract', color: 'blue' },
+            { name: 'Receipt', color: 'green' },
+            { name: 'Resume', color: 'orange' },
+            { name: 'Identity', color: 'red' },
+            { name: 'General', color: 'default' }
+          ]
+        }
+      },
+      'File Type': {
+        select: {
+          options: [
+            { name: 'PDF', color: 'red' },
+            { name: 'Image', color: 'green' },
+            { name: 'Document', color: 'blue' },
+            { name: 'Audio', color: 'yellow' },
+            { name: 'Other', color: 'gray' }
+          ]
+        }
+      },
+      'AI Summary': { rich_text: {} },
+      'Received Date': { date: {} }
+    }
+  });
+  results.NOTION_DOCUMENTS_DB_ID = documentsDb.id;
+  console.log('-> Documents DB ID:', documentsDb.id);
+
+  console.log('\nAll 5 Notion databases successfully initialized!');
   console.log(JSON.stringify(results, null, 2));
+
+  // Update .env file automatically
+  const fs = require('fs');
+  const path = require('path');
+  const envPath = path.join(__dirname, '..', '.env');
+  if (fs.existsSync(envPath)) {
+    let envContent = fs.readFileSync(envPath, 'utf-8');
+    Object.entries(results).forEach(([key, val]) => {
+      const regex = new RegExp(`^${key}=.*$`, 'm');
+      if (regex.test(envContent)) {
+        envContent = envContent.replace(regex, `${key}=${val}`);
+      } else {
+        envContent += `\n${key}=${val}`;
+      }
+    });
+    fs.writeFileSync(envPath, envContent, 'utf-8');
+    console.log('✅ Updated .env file with all 5 database IDs!');
+  }
 }
 
 initNotionDatabases().catch(console.error);
+

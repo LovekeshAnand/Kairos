@@ -106,6 +106,7 @@ async function fetchMessage(messageId) {
       sender,
       subject,
       date,
+      internalDate: parseInt(res.data.internalDate || '0', 10),
       body: body.trim() || res.data.snippet || ''
     };
   } catch (error) {
@@ -209,9 +210,76 @@ async function sendEmail({ to, subject, body, threadId = null }) {
   return res.data;
 }
 
+/**
+ * Fetches and processes latest incoming emails directly from INBOX (Unread & received in last 24h only)
+ */
+async function fetchAndProcessLatestEmails(limit = 5) {
+  const gmail = getGmailClient();
+  if (!gmail) return [];
+  const pipelineService = require('./pipelineService');
+
+  // Filter only emails received within the last 24 hours
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const dateFilter = `${yesterday.getFullYear()}/${yesterday.getMonth() + 1}/${yesterday.getDate()}`;
+
+  try {
+    const listRes = await gmail.users.messages.list({
+      userId: 'me',
+      maxResults: limit,
+      q: `is:unread label:INBOX after:${dateFilter}`
+    });
+
+    const messages = listRes.data.messages || [];
+    const results = [];
+
+    for (const m of messages) {
+      const sourceId = `gmail_${m.id}`;
+      // Skip if already processed
+      if (storageService.isProcessed(sourceId)) {
+        continue;
+      }
+
+      const emailData = await fetchMessage(m.id);
+      if (emailData) {
+        // Enforce real-time window: Only process emails received in the last 15 minutes (or live demo)
+        const cutoffTime = Date.now() - (15 * 60 * 1000);
+        if (emailData.internalDate && emailData.internalDate < cutoffTime) {
+          storageService.markProcessed(sourceId, { skipped: 'historical_email' });
+          continue;
+        }
+
+        const res = await pipelineService.processInboundCommunication({
+          source: 'email',
+          sender: emailData.sender,
+          subject: emailData.subject,
+          body: emailData.body,
+          sourceId
+        });
+        results.push(res);
+
+        // Mark as read in Gmail so it is never re-processed
+        try {
+          await gmail.users.messages.modify({
+            userId: 'me',
+            id: m.id,
+            requestBody: { removeLabelIds: ['UNREAD'] }
+          });
+        } catch (modErr) {
+          // Ignore if permission not granted
+        }
+      }
+    }
+    return results;
+  } catch (err) {
+    console.error('❌ Error fetching latest Gmail messages:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   startGmailWatch,
   fetchMessage,
   processHistoryUpdate,
-  sendEmail
+  sendEmail,
+  fetchAndProcessLatestEmails
 };

@@ -59,15 +59,18 @@ router.post('/whatsapp', async (req, res) => {
       return; // Ignore system / non-message events
     }
 
-    console.log(`\n💬 [WhatsApp Webhook] Inbound message from ${parsed.senderName} (${parsed.sender}): "${parsed.body}"`);
+    console.log(`\n💬 [WhatsApp Webhook] Inbound message from ${parsed.senderName} (${parsed.sender}) [Group: ${parsed.isGroup}]: "${parsed.body}"`);
 
     // Async pipeline processing
     setImmediate(async () => {
       await pipelineService.processInboundCommunication({
         source: 'whatsapp',
         sender: parsed.sender,
+        senderName: parsed.senderName,
         subject: `WhatsApp message from ${parsed.senderName}`,
         body: parsed.body,
+        isGroup: parsed.isGroup,
+        attachments: parsed.attachments,
         sourceId: `wa_${parsed.messageId}`
       });
     });

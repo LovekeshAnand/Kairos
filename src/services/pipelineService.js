@@ -51,7 +51,7 @@ async function scanAndStageNewInvoices() {
 }
 
 /**
- * Dispatches approved invoices to recipients via OpenWA WhatsApp
+ * Dispatches approved invoices to recipients via OpenWA WhatsApp or Gmail
  */
 async function processApprovedInvoices() {
   try {
@@ -66,27 +66,39 @@ async function processApprovedInvoices() {
         continue;
       }
 
-      console.log(`\n🚀 [Flow A - Invoice] Dispatching approved invoice: "${inv.invoiceName}" to ${inv.phoneNumber}...`);
-      storageService.markProcessed(idempotencyKey, { invoiceName: inv.invoiceName });
+      const target = inv.phoneNumber || inv.recipientName;
+      console.log(`\n🚀 [Flow A - Invoice] Dispatching approved invoice: "${inv.invoiceName}" to ${target}...`);
 
       try {
         const caption = `Hello ${inv.recipientName || 'Client'},\n\nPlease find attached your invoice "${inv.invoiceName}" for $${inv.amount}${inv.dueDate ? ` (Due: ${inv.dueDate})` : ''}.\n\nThank you for your business!`;
 
-        if (inv.fileUrl) {
-          // Send with PDF file attachment
-          await whatsappService.sendWhatsAppMedia({
-            to: inv.phoneNumber,
-            fileUrl: inv.fileUrl,
-            filename: `${inv.invoiceName.replace(/[^\w-]/g, '_')}.pdf`,
-            caption
+        if (inv.phoneNumber) {
+          // Send via WhatsApp (with file attachment if available)
+          if (inv.fileUrl) {
+            await whatsappService.sendWhatsAppMedia({
+              to: inv.phoneNumber,
+              fileUrl: inv.fileUrl,
+              filename: `${inv.invoiceName.replace(/[^\w-]/g, '_')}.pdf`,
+              caption
+            });
+          } else {
+            await whatsappService.sendWhatsAppMessage({
+              to: inv.phoneNumber,
+              text: caption
+            });
+          }
+        } else if (String(inv.recipientName).includes('@')) {
+          // Recipient name is an email address -> send via Gmail
+          await gmailService.sendEmail({
+            to: inv.recipientName,
+            subject: `Invoice: ${inv.invoiceName}`,
+            body: caption
           });
         } else {
-          // Send formatted invoice text if no file was uploaded
-          await whatsappService.sendWhatsAppMessage({
-            to: inv.phoneNumber,
-            text: caption
-          });
+          console.warn(`⚠️ Invoice "${inv.invoiceName}" has neither phone number nor email.`);
         }
+
+        storageService.markProcessed(idempotencyKey, { invoiceName: inv.invoiceName });
 
         // Update Notion status to Sent
         await notionService.updateInvoiceStatus(inv.id, 'Sent');
@@ -95,7 +107,7 @@ async function processApprovedInvoices() {
           flow: 'invoice',
           triggerType: 'notion_poll',
           status: 'success',
-          summary: `Invoice "${inv.invoiceName}" successfully sent to ${inv.phoneNumber} via WhatsApp.`,
+          summary: `Invoice "${inv.invoiceName}" successfully dispatched to ${target}.`,
           relatedItemId: inv.id
         });
 
@@ -107,7 +119,7 @@ async function processApprovedInvoices() {
           flow: 'invoice',
           triggerType: 'notion_poll',
           status: 'failed',
-          summary: `Failed sending invoice "${inv.invoiceName}" to ${inv.phoneNumber}.`,
+          summary: `Failed sending invoice "${inv.invoiceName}" to ${target}.`,
           relatedItemId: inv.id,
           error: sendErr.message
         });
@@ -148,11 +160,11 @@ async function processMeetingTranscript({ transcriptText, meetingTitle = 'Team S
     const aiResult = await aiService.structureTranscript(transcriptText, meetingTitle);
     const tasks = aiResult.tasks || [];
 
-    console.log(`🤖 [Flow B] AI extracted ${tasks.length} task(s) from transcript.`);
+    console.log(`🤖 AI extracted ${tasks.length} actionable task(s) from "${meetingTitle}".`);
 
-    const createdTasks = [];
+    const createdPages = [];
     for (const t of tasks) {
-      const taskPage = await notionService.createTaskItem({
+      const page = await notionService.createTaskItem({
         task: t.task,
         sourceMeeting: meetingTitle,
         owner: t.owner,
@@ -160,7 +172,7 @@ async function processMeetingTranscript({ transcriptText, meetingTitle = 'Team S
         reasoning: t.reasoning,
         status: 'Pending Review'
       });
-      createdTasks.push(taskPage.id);
+      createdPages.push(page.id);
     }
 
     storageService.updateItem(itemRecord.id, {
@@ -172,18 +184,17 @@ async function processMeetingTranscript({ transcriptText, meetingTitle = 'Team S
       flow: 'meeting_transcript',
       triggerType: 'webhook',
       status: 'success',
-      summary: `Extracted ${tasks.length} actionable task(s) from "${meetingTitle}" staged for review.`,
+      summary: `Extracted ${tasks.length} task(s) from meeting "${meetingTitle}" to Tasks DB.`,
       relatedItemId: itemRecord.id
     });
 
     return {
       success: true,
-      meetingSummary: aiResult.meetingSummary,
       tasksExtracted: tasks.length,
-      taskIds: createdTasks
+      taskIds: createdPages
     };
   } catch (err) {
-    console.error('❌ [Flow B] Failed processing transcript:', err.message);
+    console.error(`❌ [Flow B] Failed processing transcript:`, err.message);
     await notionService.writeRunLog({
       flow: 'meeting_transcript',
       triggerType: 'webhook',
@@ -197,17 +208,34 @@ async function processMeetingTranscript({ transcriptText, meetingTitle = 'Team S
 }
 
 /* ========================================================================= */
-/* Flow C — Inbound Email / WhatsApp -> Requests & Reminders                  */
+/* Flow C — Inbound Email / WhatsApp -> Requests, Reminders & Documents       */
 /* ========================================================================= */
 
 /**
- * Handles incoming email or WhatsApp message, structures with AI, and stages in Notion
+ * Handles incoming email or WhatsApp message, structures with AI, captures attachments in Documents DB, and stages in Notion
  */
-async function processInboundCommunication({ source, sender, subject = '', body = '', sourceId = '' }) {
+async function processInboundCommunication({
+  source,
+  sender,
+  senderName = '',
+  subject = '',
+  body = '',
+  isGroup = false,
+  attachments = [],
+  sourceId = ''
+}) {
   const startTime = Date.now();
-  console.log(`\n📬 [Flow C - Inbound] Ingesting ${source} message from "${sender}"...`);
+  console.log(`\n📬 [Flow C - Inbound] Ingesting ${source} message from "${sender}" (Group: ${isGroup})...`);
 
-  // Central storage
+  // 1. Central raw storage & idempotency guard
+  if (sourceId) {
+    if (storageService.isProcessed(sourceId)) {
+      console.log(`ℹ️ [Flow C] Skipping already processed message (${sourceId}).`);
+      return { success: true, skipped: true, reason: 'already_processed' };
+    }
+    storageService.markProcessed(sourceId, { source, sender, subject });
+  }
+
   const itemRecord = storageService.saveIncomingItem({
     id: sourceId,
     source,
@@ -215,29 +243,51 @@ async function processInboundCommunication({ source, sender, subject = '', body 
     raw_content: body || subject
   });
 
+  // 2. Capture any attached documents in the central Documents DB
+  if (attachments && attachments.length > 0) {
+    for (const att of attachments) {
+      try {
+        await notionService.createDocumentItem({
+          name: att.filename || `Attachment from ${senderName || sender}`,
+          fileUrl: att.url || null,
+          source: source.toLowerCase() === 'email' ? 'email' : 'whatsapp',
+          sender,
+          senderName: senderName || sender,
+          category: att.category || 'General',
+          fileType: att.type || 'Document',
+          summary: `Captured file from ${source} transmission: "${att.filename || 'attachment'}".`
+        });
+      } catch (docErr) {
+        console.warn('⚠️ Could not stage attachment in Documents DB:', docErr.message);
+      }
+    }
+  }
+
   try {
+    // 3. AI Structuring with Spam & Group Chatter Filter
     let aiResult;
     if (source.toLowerCase() === 'email' || source.toLowerCase() === 'gmail') {
       aiResult = await aiService.structureEmail({ sender, subject, body });
     } else {
-      aiResult = await aiService.structureWhatsApp({ sender, body });
+      aiResult = await aiService.structureWhatsApp({ sender, body, isGroup });
     }
 
-    // Handle noise / spam
+    // 4. Handle Noise / Spam / Casual Chatter
     if (aiResult.isNoise) {
-      console.log(`ℹ️ [Flow C] Message classified as noise/spam. Logging as ignored.`);
+      const reason = aiResult.noiseReason || 'casual_noise';
+      console.log(`ℹ️ [Flow C] Message classified as noise (${reason}). Logging as ignored.`);
       storageService.updateItem(itemRecord.id, { status: 'ignored' });
       await notionService.writeRunLog({
         flow: 'reminders',
         triggerType: 'webhook',
         status: 'ignored',
-        summary: `Ignored noise/spam ${source} message from ${sender}.`,
+        summary: `Ignored ${reason.replace(/_/g, ' ')} from ${senderName || sender} via ${source}.`,
         relatedItemId: itemRecord.id
       });
-      return { success: true, ignored: true };
+      return { success: true, ignored: true, reason };
     }
 
-    // Stage actionable request in Notion Requests DB
+    // 5. Stage Actionable Request in Notion Requests DB
     const requestPage = await notionService.createRequestItem({
       item: aiResult.title,
       source: source.toLowerCase() === 'email' || source.toLowerCase() === 'gmail' ? 'email' : 'whatsapp',
@@ -260,7 +310,7 @@ async function processInboundCommunication({ source, sender, subject = '', body 
       flow: 'reminders',
       triggerType: 'webhook',
       status: 'pending_approval',
-      summary: `Parsed inbound ${source} from ${sender} [${aiResult.category}] — draft response staged in Notion.`,
+      summary: `Parsed inbound ${source} from ${senderName || sender} [${aiResult.category}] — draft response staged in Notion.`,
       relatedItemId: requestPage.id
     });
 

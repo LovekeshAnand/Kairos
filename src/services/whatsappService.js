@@ -143,6 +143,80 @@ async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', captio
 }
 
 /**
+ * Fetches QR code and session state from OpenWA for web onboarding
+ */
+async function getQRCode() {
+  try {
+    let res = await axios.get(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}`, {
+      headers: { 'X-API-Key': OPENWA_API_KEY },
+      timeout: 5000
+    });
+
+    // If disconnected, auto-start the session so OpenWA launches Puppeteer & generates the QR code
+    if (res.data?.status === 'disconnected' || !res.data?.engineLoaded) {
+      try {
+        const startRes = await axios.post(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/start`, {}, {
+          headers: { 'X-API-Key': OPENWA_API_KEY },
+          timeout: 10000
+        });
+        res = startRes;
+      } catch (startErr) {
+        console.warn('⚠️ Could not auto-start session:', startErr.message);
+      }
+    }
+
+    let qrCode = res.data?.qr || null;
+    if (!qrCode && (res.data?.status === 'qr_ready' || res.data?.status === 'disconnected' || !res.data?.phone)) {
+      try {
+        const qrRes = await axios.get(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/qr`, {
+          headers: { 'X-API-Key': OPENWA_API_KEY },
+          timeout: 5000
+        });
+        qrCode = qrRes.data?.qrCode || qrRes.data?.qr || null;
+      } catch (qrErr) {
+        // Keep qrCode as null if not ready yet
+      }
+    }
+
+    return {
+      success: true,
+      status: res.data?.status || 'disconnected',
+      phone: res.data?.phone || null,
+      pushName: res.data?.pushName || null,
+      qr: qrCode
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.response?.data?.message || err.message
+    };
+  }
+}
+
+/**
+ * Disconnects / logs out the active WhatsApp session in OpenWA
+ */
+async function disconnectSession() {
+  try {
+    await axios.post(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/logout`, {}, {
+      headers: { 'X-API-Key': OPENWA_API_KEY },
+      timeout: 10000
+    });
+    return { success: true, message: 'WhatsApp session logged out successfully.' };
+  } catch (err) {
+    try {
+      await axios.delete(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}`, {
+        headers: { 'X-API-Key': OPENWA_API_KEY },
+        timeout: 10000
+      });
+      return { success: true, message: 'WhatsApp session reset successfully.' };
+    } catch (e2) {
+      return { success: false, error: e2.response?.data?.message || e2.message };
+    }
+  }
+}
+
+/**
  * Parses incoming webhook payloads from OpenWA
  */
 function parseOpenWAWebhook(body) {
@@ -159,21 +233,35 @@ function parseOpenWAWebhook(body) {
     const bodyText = data.body || data.text || data.caption || '';
     const messageId = data.id || data.messageId || `wa_${Date.now()}`;
     const pushname = data.pushname || data.notifyName || data.name || '';
+    const hasMedia = data.hasMedia || data.type === 'image' || data.type === 'document' || data.type === 'video';
 
-    // Ignore messages sent by ourselves or empty messages
-    if (!bodyText || data.fromMe === true) {
+    // Ignore messages sent by ourselves or empty text without media
+    if ((!bodyText && !hasMedia) || data.fromMe === true) {
       return null;
     }
 
     // Clean device instance suffix if present (e.g. 918929750553:12@c.us -> 918929750553@c.us)
     const sender = String(rawSender).replace(/:.*@/, '@');
     const senderName = pushname || sender.replace(/@.*$/, '');
+    const isGroup = sender.includes('@g.us') || sender.startsWith('120363');
+
+    const attachments = [];
+    if (hasMedia && data.mediaUrl) {
+      attachments.push({
+        filename: data.filename || `whatsapp_${Date.now()}.${data.mimetype?.split('/')[1] || 'pdf'}`,
+        url: data.mediaUrl,
+        type: data.type === 'image' ? 'Image' : 'Document',
+        category: 'General'
+      });
+    }
 
     return {
       messageId,
       sender,
       senderName,
-      body: bodyText,
+      body: bodyText || (hasMedia ? '[Media Document Attached]' : ''),
+      isGroup,
+      attachments,
       raw: data
     };
   } catch (err) {
@@ -187,5 +275,7 @@ module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMedia,
   parseOpenWAWebhook,
-  formatChatId
+  formatChatId,
+  getQRCode,
+  disconnectSession
 };

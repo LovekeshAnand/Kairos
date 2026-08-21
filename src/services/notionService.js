@@ -11,31 +11,51 @@ const RUN_LOG_DB_ID = process.env.NOTION_RUN_LOG_DB_ID;
 const INVOICES_DB_ID = process.env.NOTION_INVOICES_DB_ID;
 const TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
 const REQUESTS_DB_ID = process.env.NOTION_REQUESTS_DB_ID;
+const DOCUMENTS_DB_ID = process.env.NOTION_DOCUMENTS_DB_ID;
+
+let cachedBotName = null;
+let lastNotionCheck = 0;
 
 /**
  * Validates Notion API connection and configured databases
  */
-async function validateNotion() {
+async function validateNotion(force = false) {
   if (!notionApiKey) {
-    console.warn('⚠️ NOTION_API_KEY is not set in environment.');
     return { success: false, reason: 'NOTION_API_KEY missing' };
   }
 
-  try {
-    const user = await notion.users.me({});
-    console.log(`✅ Connected to Notion as bot: "${user.name || user.id}"`);
+  // Cache for 60 seconds
+  const now = Date.now();
+  if (!force && cachedBotName && (now - lastNotionCheck < 60000)) {
     return {
       success: true,
-      bot: user.name,
+      bot: cachedBotName,
       databases: {
         runLog: RUN_LOG_DB_ID || 'missing',
         invoices: INVOICES_DB_ID || 'missing',
         tasks: TASKS_DB_ID || 'missing',
-        requests: REQUESTS_DB_ID || 'missing'
+        requests: REQUESTS_DB_ID || 'missing',
+        documents: DOCUMENTS_DB_ID || 'missing'
+      }
+    };
+  }
+
+  try {
+    const user = await notion.users.me({});
+    cachedBotName = user.name || user.id;
+    lastNotionCheck = now;
+    return {
+      success: true,
+      bot: cachedBotName,
+      databases: {
+        runLog: RUN_LOG_DB_ID || 'missing',
+        invoices: INVOICES_DB_ID || 'missing',
+        tasks: TASKS_DB_ID || 'missing',
+        requests: REQUESTS_DB_ID || 'missing',
+        documents: DOCUMENTS_DB_ID || 'missing'
       }
     };
   } catch (err) {
-    console.error('❌ Notion connection validation failed:', err.message);
     return { success: false, error: err.message };
   }
 }
@@ -45,7 +65,7 @@ async function validateNotion() {
  * Guaranteed to be called on EVERY run (success, pending, rejected, failed, ignored)
  */
 async function writeRunLog({
-  flow = 'reminders',           // 'invoice' | 'meeting_transcript' | 'reminders'
+  flow = 'reminders',           // 'invoice' | 'meeting_transcript' | 'reminders' | 'documents'
   triggerType = 'webhook',     // 'webhook' | 'cron' | 'notion_poll'
   status = 'success',          // 'success' | 'failed' | 'pending_approval' | 'rejected' | 'ignored'
   summary,                     // one-line human readable summary
@@ -103,7 +123,7 @@ async function writeRunLog({
 async function createInvoiceItem({
   invoiceName,
   recipientName,
-  phoneNumber,
+  phoneNumber = '',
   amount = 0,
   dueDate = null,
   fileUrl = null,
@@ -319,37 +339,46 @@ async function createRequestItem({
   status = 'Awaiting Approval',
   summary = '',
   draftResponse = '',
+  humanResponse = '',
   rawContent = ''
 }) {
   if (!REQUESTS_DB_ID) {
     throw new Error('NOTION_REQUESTS_DB_ID is not configured');
   }
 
+  const properties = {
+    'Item': {
+      title: [{ text: { content: (item || 'Inbound Item').slice(0, 2000) } }]
+    },
+    'Source': {
+      select: { name: source }
+    },
+    'Sender': {
+      rich_text: [{ text: { content: (sender || '').slice(0, 2000) } }]
+    },
+    'Category': {
+      select: { name: category || 'General' }
+    },
+    'Priority': {
+      select: { name: priority || 'Medium' }
+    },
+    'Status': {
+      select: { name: status || 'Awaiting Approval' }
+    },
+    'Summary': {
+      rich_text: [{ text: { content: (summary || '').slice(0, 2000) } }]
+    }
+  };
+
+  if (humanResponse) {
+    properties['Human Response'] = {
+      rich_text: [{ text: { content: (humanResponse || '').slice(0, 2000) } }]
+    };
+  }
+
   const page = await notion.pages.create({
     parent: { database_id: REQUESTS_DB_ID },
-    properties: {
-      'Item': {
-        title: [{ text: { content: (item || 'Inbound Item').slice(0, 2000) } }]
-      },
-      'Source': {
-        select: { name: source }
-      },
-      'Sender': {
-        rich_text: [{ text: { content: (sender || '').slice(0, 2000) } }]
-      },
-      'Category': {
-        select: { name: category || 'General' }
-      },
-      'Priority': {
-        select: { name: priority || 'Medium' }
-      },
-      'Status': {
-        select: { name: status || 'Awaiting Approval' }
-      },
-      'Summary': {
-        rich_text: [{ text: { content: (summary || '').slice(0, 2000) } }]
-      }
-    },
+    properties,
     children: [
       {
         object: 'block',
@@ -363,6 +392,14 @@ async function createRequestItem({
         type: 'quote',
         quote: {
           rich_text: [{ text: { content: (draftResponse || 'No draft generated').slice(0, 2000) } }]
+        }
+      },
+      {
+        object: 'block',
+        type: 'callout',
+        callout: {
+          icon: { type: 'emoji', emoji: '💡' },
+          rich_text: [{ text: { content: 'Tip: You can override the AI draft by typing your custom message into the "Human Response" property above before approving.' } }]
         }
       },
       {
@@ -411,7 +448,8 @@ async function fetchRequestsByStatus(status) {
         category: p['Category']?.select?.name || 'General',
         priority: p['Priority']?.select?.name || 'Medium',
         status: p['Status']?.select?.name || '',
-        summary: p['Summary']?.rich_text?.[0]?.plain_text || ''
+        summary: p['Summary']?.rich_text?.[0]?.plain_text || '',
+        humanResponse: p['Human Response']?.rich_text?.[0]?.plain_text || ''
       };
     });
   } catch (err) {
@@ -433,15 +471,132 @@ async function updateRequestStatus(pageId, status) {
 }
 
 /**
- * Reads page body blocks (e.g. to extract the draft response block)
+ * Reads page response prioritizing the custom Human Response property, falling back to AI Quote block
  */
 async function getPageDraftResponse(pageId) {
   try {
+    const page = await notion.pages.retrieve({ page_id: pageId });
+    const humanResp = page.properties?.['Human Response']?.rich_text?.[0]?.plain_text;
+    if (humanResp && humanResp.trim().length > 0) {
+      console.log(`🙋 [Human Override] Using custom human reply from Notion property: "${humanResp.slice(0, 50)}..."`);
+      return humanResp.trim();
+    }
+
     const blocks = await notion.blocks.children.list({ block_id: pageId });
     const quoteBlock = blocks.results.find(b => b.type === 'quote');
     return quoteBlock?.quote?.rich_text?.[0]?.plain_text || '';
   } catch (err) {
     return '';
+  }
+}
+
+/* ========================================================================= */
+/* Database 5 — Documents & Attachment Asset Repository                       */
+/* ========================================================================= */
+
+/**
+ * Stores a captured document/attachment in the central Documents DB
+ */
+async function createDocumentItem({
+  name,
+  fileUrl = null,
+  source = 'whatsapp',
+  sender = '',
+  senderName = '',
+  category = 'General',
+  fileType = 'PDF',
+  summary = '',
+  receivedDate = new Date().toISOString()
+}) {
+  if (!DOCUMENTS_DB_ID) {
+    console.warn('⚠️ NOTION_DOCUMENTS_DB_ID is not configured. Document staging skipped.');
+    return null;
+  }
+
+  const properties = {
+    'Document Name': {
+      title: [{ text: { content: (name || 'New Document').slice(0, 2000) } }]
+    },
+    'Source': {
+      select: { name: source }
+    },
+    'Sender': {
+      rich_text: [{ text: { content: (sender || '').slice(0, 2000) } }]
+    },
+    'Sender Name': {
+      rich_text: [{ text: { content: (senderName || '').slice(0, 2000) } }]
+    },
+    'Category': {
+      select: { name: category || 'General' }
+    },
+    'File Type': {
+      select: { name: fileType || 'Other' }
+    },
+    'AI Summary': {
+      rich_text: [{ text: { content: (summary || '').slice(0, 2000) } }]
+    },
+    'Received Date': {
+      date: { start: receivedDate }
+    }
+  };
+
+  if (fileUrl) {
+    properties['File'] = {
+      files: [
+        {
+          name: `${name || 'document'}`,
+          external: { url: fileUrl }
+        }
+      ]
+    };
+  }
+
+  const page = await notion.pages.create({
+    parent: { database_id: DOCUMENTS_DB_ID },
+    properties
+  });
+
+  console.log(`📂 [Documents DB] Staged document: "${name}" (${category}) [${page.id}]`);
+  return page;
+}
+
+/**
+ * Queries stored documents
+ */
+async function fetchDocuments({ category, source } = {}) {
+  if (!DOCUMENTS_DB_ID) return [];
+
+  try {
+    const filter = [];
+    if (category) filter.push({ property: 'Category', select: { equals: category } });
+    if (source) filter.push({ property: 'Source', select: { equals: source } });
+
+    const queryParams = { database_id: DOCUMENTS_DB_ID };
+    if (filter.length === 1) {
+      queryParams.filter = filter[0];
+    } else if (filter.length > 1) {
+      queryParams.filter = { and: filter };
+    }
+
+    const response = await notion.databases.query(queryParams);
+    return response.results.map(page => {
+      const p = page.properties;
+      return {
+        id: page.id,
+        name: p['Document Name']?.title?.[0]?.plain_text || '',
+        source: p['Source']?.select?.name || '',
+        sender: p['Sender']?.rich_text?.[0]?.plain_text || '',
+        senderName: p['Sender Name']?.rich_text?.[0]?.plain_text || '',
+        category: p['Category']?.select?.name || '',
+        fileType: p['File Type']?.select?.name || '',
+        summary: p['AI Summary']?.rich_text?.[0]?.plain_text || '',
+        receivedDate: p['Received Date']?.date?.start || '',
+        fileUrl: p['File']?.files?.[0]?.file?.url || p['File']?.files?.[0]?.external?.url || null
+      };
+    });
+  } catch (err) {
+    console.error('❌ Error fetching documents from Notion:', err.message);
+    return [];
   }
 }
 
@@ -461,5 +616,9 @@ module.exports = {
   createRequestItem,
   fetchRequestsByStatus,
   updateRequestStatus,
-  getPageDraftResponse
+  getPageDraftResponse,
+  // Database 5 - Documents
+  createDocumentItem,
+  fetchDocuments
 };
+

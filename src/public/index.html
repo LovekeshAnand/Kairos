@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairos — Autonomous Operations Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0d14;
+      --bg-secondary: #121824;
+      --bg-card: rgba(22, 30, 46, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.12) 0px, transparent 50%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.5rem 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 13, 20, 0.85);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.35);
+    }
+
+    .brand h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .pill-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1240px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    .hero-text h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .hero-text p {
+      color: var(--text-secondary);
+      max-width: 600px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.75rem;
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .card-icon {
+      font-size: 1.5rem;
+    }
+
+    .card-body {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      padding: 0.75rem 1.4rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-google {
+      background: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-google:hover {
+      background: #f1f5f9;
+      transform: translateY(-1px);
+    }
+
+    .btn-whatsapp {
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+    }
+
+    .btn-whatsapp:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .qr-container {
+      background: #ffffff;
+      padding: 1rem;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 1rem 0;
+      align-self: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .qr-container img {
+      width: 180px;
+      height: 180px;
+      display: block;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-connected {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pending {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .db-matrix {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .db-box {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .db-box h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: var(--text-primary);
+    }
+
+    .db-box p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .toast {
+      background: rgba(16, 185, 129, 0.9);
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border-color);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">⏳</div>
+      <div>
+        <h1>Kairos Operations Engine</h1>
+        <p>Autonomous AI & Notion Control Interface</p>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="pill">
+        <div class="pill-pulse"></div>
+        Engine Live (:3000)
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Toast Notification for Auth Return -->
+    <div id="toastContainer"></div>
+
+    <!-- Hero Overview -->
+    <div class="hero-banner">
+      <div class="hero-text">
+        <h2>Operations & Onboarding Portal</h2>
+        <p>Connect your business communication channels with 1-click Google OAuth and WhatsApp pairing. Your code executes the background workflows; Notion provides the human approval interface.</p>
+      </div>
+      <div>
+        <a href="https://notion.so" target="_blank" class="btn btn-outline">
+          📑 Open Notion Workspace
+        </a>
+      </div>
+    </div>
+
+    <!-- 3-Column Onboarding Grid -->
+    <div class="grid-2" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));">
+
+      <!-- Card 1: 1-Click Notion Operations Hub Setup Wizard -->
+      <div class="card" style="border-color: rgba(59, 130, 246, 0.3);">
+        <div>
+          <div class="card-header">
+            <div class="card-title">
+              <span class="card-icon">📑</span>
+              1-Click Notion Setup
+            </div>
+            <span id="notionStatusBadge" class="status-badge status-connected">Ready</span>
+          </div>
+          <div class="card-body">
+            Create and link your 5 Kairos operational databases inside your own Notion workspace automatically.
+            
+            <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); display: flex; justify-content: space-between;">
+                  <span>NOTION INTEGRATION SECRET</span>
+                  <a href="https://www.notion.so/profile/integrations" target="_blank" style="color: var(--accent-cyan); text-decoration: none;">Get Token ↗</a>
+                </label>
+                <input id="notionKeyInput" type="password" placeholder="ntn_..." style="width: 100%; margin-top: 0.25rem; padding: 0.6rem 0.8rem; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 0.85rem; font-family: monospace;">
+              </div>
+
+              <div>
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">
+                  PARENT PAGE URL OR ID (Paste from browser)
+                </label>
+                <input id="notionPageInput" type="text" placeholder="https://notion.so/Kairos-Operations-Hub-..." style="width: 100%; margin-top: 0.25rem; padding: 0.6rem 0.8rem; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 0.85rem;">
+              </div>
+            </div>
+
+            <div id="notionSetupResult" style="margin-top: 0.75rem; font-size: 0.8rem;"></div>
+          </div>
+        </div>
+        <div>
+          <button id="notionInitBtn" onclick="runNotionSetup()" class="btn" style="width: 100%; background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple)); color: #fff;">
+            ⚡ Auto-Create All 5 Databases
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 2: Google Gmail OAuth Onboarding -->
+      <div class="card">
+        <div>
+          <div class="card-header">
+            <div class="card-title">
+              <span class="card-icon">✉️</span>
+              Gmail OAuth Integration
+            </div>
+            <span id="gmailStatusBadge" class="status-badge status-pending">Checking...</span>
+          </div>
+          <div class="card-body">
+            Grant permission to ingest real-time emails via Google Cloud Pub/Sub push notifications. The AI categorizes incoming emails, filters spam, and prepares draft replies staged directly into Notion.
+            <div id="gmailConnectedInfo" style="margin-top: 0.85rem; font-size: 0.85rem; color: var(--accent-cyan);"></div>
+          </div>
+        </div>
+        <div id="gmailActionContainer">
+          <a id="gmailConnectBtn" href="/auth/google/login" class="btn btn-google" style="width: 100%;">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.92-2.26c-.8.54-1.83.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.96A8.996 8.996 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.33c.71-2.13 2.69-3.71 5.03-3.71z"/></svg>
+            Sign in & Connect with Google
+          </a>
+          <button id="gmailDisconnectBtn" onclick="disconnectGoogle()" class="btn btn-outline" style="width: 100%; display: none; color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3);">
+            🔌 Disconnect Google Account
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 3: OpenWA WhatsApp Gateway Widget -->
+      <div class="card">
+        <div>
+          <div class="card-header">
+            <div class="card-title">
+              <span class="card-icon">💬</span>
+              WhatsApp Gateway (OpenWA)
+            </div>
+            <span id="waStatusBadge" class="status-badge status-pending">Checking...</span>
+          </div>
+          <div class="card-body">
+            Self-hosted WhatsApp Web anti-ban gateway on port 2785. Supports direct chats, WhatsApp groups, and encrypted session persistence.
+            <div id="waDeviceDetails" style="margin-top: 0.85rem; font-size: 0.85rem; color: var(--accent-green);"></div>
+          </div>
+          
+          <div id="qrWrapper" style="display: none; text-align: center; margin: 1rem 0;">
+            <div class="qr-container">
+              <img id="qrImage" src="" alt="WhatsApp QR Code">
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Scan via <strong>WhatsApp &gt; Linked Devices</strong></p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+          <button id="waConnectBtn" onclick="connectWhatsApp()" class="btn btn-whatsapp" style="width: 100%;">
+            📲 Connect WhatsApp (Scan QR)
+          </button>
+          <button id="waDisconnectBtn" onclick="disconnectWhatsApp()" class="btn btn-outline" style="width: 100%; display: none; color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3);">
+            🔌 Disconnect WhatsApp
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5-Database Infrastructure Overview -->
+    <div>
+      <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">
+        🗄️ Connected Notion Databases (5/5 Initialized)
+      </h3>
+      <div class="db-matrix">
+        <div class="db-box">
+          <h4>📗 Run Log</h4>
+          <p>Immutable execution audit trail with timestamps.</p>
+        </div>
+        <div class="db-box">
+          <h4>📄 Invoices</h4>
+          <p>Flow A: Invoice staging, approval gate & PDF dispatch.</p>
+        </div>
+        <div class="db-box">
+          <h4>✅ Tasks</h4>
+          <p>Flow B: Google Meet transcript action items.</p>
+        </div>
+        <div class="db-box">
+          <h4>📥 Requests</h4>
+          <p>Flow C: Inbound communications & human response overrides.</p>
+        </div>
+        <div class="db-box">
+          <h4>📂 Documents</h4>
+          <p>Central repository for files from WhatsApp and Email.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Kairos Autonomous Operations Hub &bull; Pair Programming Engine &bull; Built with Node.js & Notion API</p>
+  </footer>
+
+  <script>
+    // Check URL parameters for OAuth callbacks
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auth_success') === 'true') {
+      const email = params.get('email') || 'Account';
+      document.getElementById('toastContainer').innerHTML = `
+        <div class="toast">
+          <span>🎉</span>
+          <span>Google Account <strong>${email}</strong> successfully connected and registered with Pub/Sub!</span>
+        </div>
+      `;
+    } else if (params.get('auth_error')) {
+      document.getElementById('toastContainer').innerHTML = `
+        <div class="toast" style="background: rgba(239, 68, 68, 0.9);">
+          <span>❌</span>
+          <span>Google Authentication Error: ${params.get('auth_error')}</span>
+        </div>
+      `;
+    }
+
+    // Check system status
+    async function checkSystemStatus() {
+      try {
+        const res = await fetch('/auth/system/status');
+        const data = await res.json();
+        
+        const gmailBadge = document.getElementById('gmailStatusBadge');
+        const gmailInfo = document.getElementById('gmailConnectedInfo');
+        const gmailConnectBtn = document.getElementById('gmailConnectBtn');
+        const gmailDisconnectBtn = document.getElementById('gmailDisconnectBtn');
+        
+        if (data.connectedAccounts && data.connectedAccounts.length > 0) {
+          gmailBadge.className = 'status-badge status-connected';
+          gmailBadge.innerText = 'Connected';
+          gmailInfo.innerText = `Active Account: ${data.connectedAccounts.join(', ')}`;
+          if (gmailConnectBtn) gmailConnectBtn.style.display = 'none';
+          if (gmailDisconnectBtn) gmailDisconnectBtn.style.display = 'block';
+        } else {
+          gmailBadge.className = 'status-badge status-pending';
+          gmailBadge.innerText = 'Not Connected';
+          gmailInfo.innerText = 'Click below to connect your first Gmail account.';
+          if (gmailConnectBtn) gmailConnectBtn.style.display = 'inline-flex';
+          if (gmailDisconnectBtn) gmailDisconnectBtn.style.display = 'none';
+        }
+      } catch (err) {
+        console.warn('System status poll failed:', err);
+      }
+    }
+
+    let waPollInterval = null;
+
+    // Connect WhatsApp and reveal QR code on demand
+    async function connectWhatsApp() {
+      const btn = document.getElementById('waConnectBtn');
+      const waDetails = document.getElementById('waDeviceDetails');
+      
+      btn.disabled = true;
+      btn.innerText = '⏳ Fetching QR Code...';
+      waDetails.innerText = 'Connecting to WhatsApp Web gateway...';
+      
+      await checkWhatsAppStatus(true);
+      
+      btn.disabled = false;
+      btn.innerText = '🔄 Refresh QR Code';
+
+      if (!waPollInterval) {
+        waPollInterval = setInterval(() => checkWhatsAppStatus(true), 3000);
+      }
+    }
+
+    // Check WhatsApp status & QR code
+    async function checkWhatsAppStatus(userInitiated = false) {
+      const waBadge = document.getElementById('waStatusBadge');
+      const waDetails = document.getElementById('waDeviceDetails');
+      const qrWrapper = document.getElementById('qrWrapper');
+      const qrImage = document.getElementById('qrImage');
+      const waConnectBtn = document.getElementById('waConnectBtn');
+      const waDisconnectBtn = document.getElementById('waDisconnectBtn');
+
+      try {
+        const res = await fetch('/auth/whatsapp/status');
+        const data = await res.json();
+
+        if (data.status === 'ready' || data.status === 'authenticated' || data.phone) {
+          waBadge.className = 'status-badge status-connected';
+          waBadge.innerText = 'Connected';
+          waDetails.innerText = `Paired Device: ${data.pushName || 'WhatsApp User'} (+${data.phone || ''})`;
+          qrWrapper.style.display = 'none';
+          if (waConnectBtn) waConnectBtn.style.display = 'none';
+          if (waDisconnectBtn) waDisconnectBtn.style.display = 'block';
+          if (waPollInterval) { clearInterval(waPollInterval); waPollInterval = null; }
+        } else if (data.qr) {
+          waBadge.className = 'status-badge status-pending';
+          waBadge.innerText = 'Ready to Pair';
+          if (userInitiated || qrWrapper.style.display === 'block') {
+            waDetails.innerText = 'Scan the QR code below using your WhatsApp mobile app (Linked Devices).';
+            if (userInitiated || !qrImage.src || qrImage.src.endsWith('/')) {
+              qrImage.src = `/auth/whatsapp/qr.png?t=${Date.now()}`;
+            }
+            qrWrapper.style.display = 'block';
+          } else {
+            waDetails.innerText = 'Click "Connect WhatsApp" below to display your QR code.';
+          }
+          if (waConnectBtn) {
+            waConnectBtn.style.display = 'inline-flex';
+            waConnectBtn.innerText = qrWrapper.style.display === 'block' ? '🔄 Refresh QR Code' : '📲 Connect WhatsApp (Scan QR)';
+          }
+          if (waDisconnectBtn) waDisconnectBtn.style.display = 'none';
+        } else {
+          waBadge.className = 'status-badge status-pending';
+          waBadge.innerText = data.status || 'Offline';
+          waDetails.innerText = 'OpenWA Gateway is offline or initializing...';
+          qrWrapper.style.display = 'none';
+          if (waConnectBtn) {
+            waConnectBtn.style.display = 'inline-flex';
+            waConnectBtn.innerText = '📲 Connect WhatsApp (Scan QR)';
+          }
+          if (waDisconnectBtn) waDisconnectBtn.style.display = 'none';
+        }
+      } catch (err) {
+        waBadge.className = 'status-badge status-pending';
+        waBadge.innerText = 'OpenWA Offline';
+        waDetails.innerText = 'Start OpenWA gateway on port 2785.';
+        if (waDisconnectBtn) waDisconnectBtn.style.display = 'none';
+      }
+    }
+
+    // Disconnect Google Account
+    async function disconnectGoogle() {
+      if (!confirm('Are you sure you want to disconnect this Google account?')) return;
+      try {
+        const res = await fetch('/auth/google/disconnect', { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('toastContainer').innerHTML = `
+          <div class="toast" style="background: rgba(239, 68, 68, 0.9);">
+            <span>🔌</span>
+            <span>${data.message || 'Google account disconnected.'}</span>
+          </div>
+        `;
+        checkSystemStatus();
+      } catch (err) {
+        alert('Disconnect failed: ' + err.message);
+      }
+    }
+
+    // Disconnect WhatsApp Session
+    async function disconnectWhatsApp() {
+      if (!confirm('Are you sure you want to disconnect and log out of WhatsApp?')) return;
+      try {
+        const res = await fetch('/auth/whatsapp/disconnect', { method: 'POST' });
+        const data = await res.json();
+        document.getElementById('toastContainer').innerHTML = `
+          <div class="toast" style="background: rgba(239, 68, 68, 0.9);">
+            <span>🔌</span>
+            <span>${data.message || 'WhatsApp session logged out.'}</span>
+          </div>
+        `;
+        checkWhatsAppStatus();
+      } catch (err) {
+        alert('WhatsApp disconnect failed: ' + err.message);
+      }
+    }
+
+    // 1-Click Notion Setup Wizard
+    async function runNotionSetup() {
+      const keyInput = document.getElementById('notionKeyInput').value.trim();
+      const pageInput = document.getElementById('notionPageInput').value.trim();
+      const resultDiv = document.getElementById('notionSetupResult');
+      const btn = document.getElementById('notionInitBtn');
+
+      if (!keyInput || !pageInput) {
+        resultDiv.innerHTML = '<span style="color: var(--accent-red);">❌ Please enter both Notion Secret Token and Parent Page URL.</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerText = '⏳ Initializing 5 Databases...';
+      resultDiv.innerHTML = '<span style="color: var(--accent-amber);">Connecting to Notion API and constructing databases...</span>';
+
+      try {
+        const res = await fetch('/auth/notion/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notionApiKey: keyInput, parentPageInput: pageInput })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          resultDiv.innerHTML = `
+            <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.75rem; border-radius: 8px; color: #34d399; margin-top: 0.5rem;">
+              ✅ <strong>Success!</strong> All 5 databases created and linked to your Notion page!
+            </div>
+          `;
+          btn.innerText = '✅ Databases Live in Notion';
+          checkSystemStatus();
+        } else {
+          resultDiv.innerHTML = `<span style="color: var(--accent-red);">❌ Error: ${data.error}</span>`;
+          btn.disabled = false;
+          btn.innerText = '⚡ Retry Auto-Create';
+        }
+      } catch (err) {
+        resultDiv.innerHTML = `<span style="color: var(--accent-red);">❌ Failed: ${err.message}</span>`;
+        btn.disabled = false;
+        btn.innerText = '⚡ Retry Auto-Create';
+      }
+    }
+
+    checkSystemStatus();
+    checkWhatsAppStatus();
+    setInterval(checkSystemStatus, 10000);
+    setInterval(checkWhatsAppStatus, 15000);
+  </script>
+</body>
+</html>

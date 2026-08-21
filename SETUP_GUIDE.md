@@ -43,50 +43,38 @@ To run live integrations with Notion, OpenRouter AI, WhatsApp, and Gmail, follow
 
 ---
 
-### 1. 📑 Notion Setup (Integration Token & 4 Databases)
+### 1. 📑 Notion Setup (1-Click Automated Setup)
 
-#### Step 1.1: Create a Notion Integration
-1. Go to the [Notion Developers Integrations Portal](https://www.notion.so/profile/integrations).
-2. Click **"+ New integration"**.
-3. Set the Name to **`Kairos`** and associate it with your Notion workspace.
-4. Under Capabilities, ensure **Read content**, **Update content**, and **Insert content** are checked.
-5. Click **Submit** and copy your **Internal Integration Secret** (starts with `ntn_...`).
-6. Paste it into your `.env` file:
+You can set up your Notion workspace in **2 simple minutes** either via the Web Dashboard or CLI:
+
+#### Method A: Via Web Dashboard (Easiest)
+1. Start the engine (`npm start`) and open **`http://localhost:3000`**.
+2. Under **"1-Click Notion Setup"**:
+   - Paste your **Notion Integration Secret** (`ntn_...`).
+   - Paste your **Parent Page URL** directly from the browser address bar.
+   - Click **"⚡ Auto-Create All 5 Databases"**.
+3. All 5 databases will be built inside your Notion page instantly!
+
+---
+
+#### Method B: Via CLI & .env
+1. **Create Integration**: Go to [notion.so/profile/integrations](https://www.notion.so/profile/integrations) $\rightarrow$ Create integration **`Kairos`** $\rightarrow$ Copy Secret (`ntn_...`).
+2. **Create Parent Page**: In Notion, create a blank page titled **`Kairos Operations Hub`** $\rightarrow$ Click `···` $\rightarrow$ **Connect to** $\rightarrow$ select **`Kairos`**.
+3. **Set .env**:
    ```env
    NOTION_API_KEY=ntn_your_secret_key_here
+   NOTION_PARENT_PAGE_ID=3c23cc964d1f80059d16f84a5264f066
    ```
-
-#### Step 1.2: Create a Parent Page in Notion
-1. Open your Notion workspace.
-2. Create a new blank page and title it: **`Kairos Operation Hub`**.
-3. In the top-right corner of this page, click the **three dots (`...`)** menu.
-4. Scroll down to **Connections** $\rightarrow$ click **"+ Add connections"**.
-5. Search for and select your **`Kairos`** integration, then click **Confirm**.
-   *(⚠️ Critical: If you skip this step, the integration will return a 404 Permission Denied error).*
-
-#### Step 1.3: Copy the Parent Page ID
-Look at the URL of your new Notion page in the browser address bar:
-```
-https://www.notion.so/myworkspace/Kairos-Operation-Hub-3c23cc964d1f80059d16f84a5264f066
-```
-The **32-character hexadecimal string** at the end (`3c23cc964d1f80059d16f84a5264f066`) is your `NOTION_PARENT_PAGE_ID`.
-Add it to your `.env` file:
-```env
-NOTION_PARENT_PAGE_ID=3c23cc964d1f80059d16f84a5264f066
-```
-
-#### Step 1.4: Auto-Generate All 4 Notion Databases
-Run the database creator script from the repository root:
-```bash
-npm run setup:notion
-```
-This script calls the Notion API and automatically creates the 4 required databases under your parent page with their exact schemas and property types:
-* 📗 **`Run Log`** (Audit trail)
-* 📄 **`Invoices`** (Invoice staging & approval)
-* ✅ **`Tasks`** (Meeting action item extractor)
-* 📥 **`Requests / Reminders`** (Inbound communications & AI drafting)
-
-The script will output the 4 database IDs and automatically save them into your `.env` file.
+4. **Run 1-Command Builder**:
+   ```bash
+   npm run setup:notion
+   ```
+   This automatically constructs all 5 databases nested in your page:
+   * 📗 **`Run Log`** (Audit trail with timestamps & flows)
+   * 📄 **`Invoices`** (Invoice staging, file attachments & approval gate)
+   * ✅ **`Tasks`** (Meeting action item extractor)
+   * 📥 **`Requests / Reminders`** (Inbound communications & Human Response overrides)
+   * 📂 **`Documents`** (Central repository for files from WhatsApp & Email)
 
 ---
 
@@ -144,6 +132,15 @@ Kairos uses a local, self-hosted [OpenWA](https://github.com/rmyndharis/OpenWA) 
    GMAIL_CLIENT_SECRET=GOCSPX-your_client_secret
    GMAIL_REFRESH_TOKEN=1//your_oauth_refresh_token
    ```
+
+#### Required Google Cloud OAuth Scopes:
+Ensure the following scopes are added in your Google Cloud Console (under **OAuth consent screen $\rightarrow$ Scopes**):
+* `https://www.googleapis.com/auth/gmail.readonly` *(Read inbound emails)*
+* `https://www.googleapis.com/auth/gmail.send` *(Dispatch approved email replies & invoices)*
+* `https://www.googleapis.com/auth/userinfo.email` *(Fetch user email address)*
+* `https://www.googleapis.com/auth/userinfo.profile` *(Fetch user profile details)*
+
+> 💡 **Tip for Testing / Demos**: Keep the OAuth consent screen in **"Testing"** mode and add your test Gmail accounts under **Test Users**. No Google security review is required! Users can connect in 1 click at `http://localhost:3000`.
 
 ---
 
