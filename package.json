@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
     "test:all": "node tests/test-pipeline.js",
     "test:v2": "node tests/test-v2-features.js",
     "test:notion": "node tests/test-notion.js",
