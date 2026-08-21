@@ -5,6 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "start:all": "node scripts/start-all.js",
+    "dev:all": "node scripts/start-all.js",
     "dev": "node --watch src/server.js",
     "frontend": "npm --prefix frontend run dev",
     "build:frontend": "npm --prefix frontend run build",
