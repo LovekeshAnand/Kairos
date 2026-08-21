@@ -7,11 +7,11 @@ const notion = new Client({
   auth: notionApiKey
 });
 
-const RUN_LOG_DB_ID = process.env.NOTION_RUN_LOG_DB_ID;
-const INVOICES_DB_ID = process.env.NOTION_INVOICES_DB_ID;
-const TASKS_DB_ID = process.env.NOTION_TASKS_DB_ID;
-const REQUESTS_DB_ID = process.env.NOTION_REQUESTS_DB_ID;
-const DOCUMENTS_DB_ID = process.env.NOTION_DOCUMENTS_DB_ID;
+const getRunLogDbId = () => process.env.NOTION_RUN_LOG_DB_ID || '';
+const getInvoicesDbId = () => process.env.NOTION_INVOICES_DB_ID || '';
+const getTasksDbId = () => process.env.NOTION_TASKS_DB_ID || '';
+const getRequestsDbId = () => process.env.NOTION_REQUESTS_DB_ID || '';
+const getDocumentsDbId = () => process.env.NOTION_DOCUMENTS_DB_ID || '';
 
 let cachedBotName = null;
 let lastNotionCheck = 0;
@@ -31,11 +31,11 @@ async function validateNotion(force = false) {
       success: true,
       bot: cachedBotName,
       databases: {
-        runLog: RUN_LOG_DB_ID || 'missing',
-        invoices: INVOICES_DB_ID || 'missing',
-        tasks: TASKS_DB_ID || 'missing',
-        requests: REQUESTS_DB_ID || 'missing',
-        documents: DOCUMENTS_DB_ID || 'missing'
+        runLog: getRunLogDbId() || 'missing',
+        invoices: getInvoicesDbId() || 'missing',
+        tasks: getTasksDbId() || 'missing',
+        requests: getRequestsDbId() || 'missing',
+        documents: getDocumentsDbId() || 'missing'
       }
     };
   }
@@ -48,11 +48,11 @@ async function validateNotion(force = false) {
       success: true,
       bot: cachedBotName,
       databases: {
-        runLog: RUN_LOG_DB_ID || 'missing',
-        invoices: INVOICES_DB_ID || 'missing',
-        tasks: TASKS_DB_ID || 'missing',
-        requests: REQUESTS_DB_ID || 'missing',
-        documents: DOCUMENTS_DB_ID || 'missing'
+        runLog: getRunLogDbId() || 'missing',
+        invoices: getInvoicesDbId() || 'missing',
+        tasks: getTasksDbId() || 'missing',
+        requests: getRequestsDbId() || 'missing',
+        documents: getDocumentsDbId() || 'missing'
       }
     };
   } catch (err) {
@@ -72,14 +72,15 @@ async function writeRunLog({
   relatedItemId = '',          // ID or reference of affected item
   error = null
 }) {
-  if (!RUN_LOG_DB_ID) {
-    console.warn('⚠️ NOTION_RUN_LOG_DB_ID is not configured. Log output:', summary);
+  const runLogDbId = getRunLogDbId();
+  if (!runLogDbId) {
+    console.log(`ℹ️ [Run Log] ${summary} (${status})`);
     return null;
   }
 
   try {
     const page = await notion.pages.create({
-      parent: { database_id: RUN_LOG_DB_ID },
+      parent: { database_id: runLogDbId },
       properties: {
         'Summary': {
           title: [{ text: { content: (summary || 'Execution run').slice(0, 2000) } }]
@@ -108,7 +109,7 @@ async function writeRunLog({
     console.log(`📗 [Run Log] Written to Notion: "${summary}" (${status})`);
     return page;
   } catch (err) {
-    console.error('❌ Failed to write Notion Run Log row:', err.message);
+    console.warn('⚠️ Failed to write Notion Run Log row:', err.message);
     return null;
   }
 }
@@ -129,7 +130,8 @@ async function createInvoiceItem({
   fileUrl = null,
   status = 'New'
 }) {
-  if (!INVOICES_DB_ID) {
+  const invoicesDbId = getInvoicesDbId();
+  if (!invoicesDbId) {
     throw new Error('NOTION_INVOICES_DB_ID is not configured');
   }
 
@@ -167,7 +169,7 @@ async function createInvoiceItem({
   }
 
   const page = await notion.pages.create({
-    parent: { database_id: INVOICES_DB_ID },
+    parent: { database_id: invoicesDbId },
     properties
   });
 
@@ -178,11 +180,12 @@ async function createInvoiceItem({
  * Queries invoices by status (e.g. 'New', 'Approved', 'Awaiting Approval')
  */
 async function fetchInvoicesByStatus(status) {
-  if (!INVOICES_DB_ID) return [];
+  const invoicesDbId = getInvoicesDbId();
+  if (!invoicesDbId) return [];
 
   try {
     const response = await notion.databases.query({
-      database_id: INVOICES_DB_ID,
+      database_id: invoicesDbId,
       filter: {
         property: 'Status',
         select: { equals: status }
@@ -342,7 +345,8 @@ async function createRequestItem({
   humanResponse = '',
   rawContent = ''
 }) {
-  if (!REQUESTS_DB_ID) {
+  const requestsDbId = getRequestsDbId();
+  if (!requestsDbId) {
     throw new Error('NOTION_REQUESTS_DB_ID is not configured');
   }
 
@@ -377,7 +381,7 @@ async function createRequestItem({
   }
 
   const page = await notion.pages.create({
-    parent: { database_id: REQUESTS_DB_ID },
+    parent: { database_id: requestsDbId },
     properties,
     children: [
       {
@@ -427,11 +431,12 @@ async function createRequestItem({
  * Queries requests by status (e.g. 'Approved', 'Awaiting Approval')
  */
 async function fetchRequestsByStatus(status) {
-  if (!REQUESTS_DB_ID) return [];
+  const requestsDbId = getRequestsDbId();
+  if (!requestsDbId) return [];
 
   try {
     const response = await notion.databases.query({
-      database_id: REQUESTS_DB_ID,
+      database_id: requestsDbId,
       filter: {
         property: 'Status',
         select: { equals: status }
