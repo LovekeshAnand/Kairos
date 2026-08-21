@@ -92,12 +92,13 @@ export default function App() {
   useEffect(() => {
     checkAuth();
     fetchSystemStatus();
+    fetchWhatsAppStatus();
     const interval = setInterval(() => {
       fetchSystemStatus();
       if (authState.authenticated) {
         fetchWhatsAppStatus();
       }
-    }, 12000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [authState.authenticated]);
 
