@@ -19,8 +19,14 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+const frontendDist = path.join(__dirname, '../frontend/dist');
+const publicDir = path.join(__dirname, 'public');
+
+if (fs.existsSync(frontendDist)) {
+  app.use(express.static(frontendDist));
+} else {
+  app.use(express.static(publicDir));
+}
 
 // Health Check Endpoint
 app.get('/health', async (req, res) => {
@@ -43,6 +49,18 @@ app.get('/health', async (req, res) => {
 // Mount Routes
 app.use('/webhooks', webhookRoutes);
 app.use('/auth', authRoutes);
+
+// SPA Fallback for client routing
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/auth') || req.path.startsWith('/webhooks') || req.path.startsWith('/health')) {
+    return next();
+  }
+  const indexPath = path.join(frontendDist, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(indexPath);
+  }
+  next();
+});
 
 // Global Error Handler
 app.use((err, req, res, next) => {

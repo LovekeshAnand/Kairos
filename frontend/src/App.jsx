@@ -1,342 +1,471 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  CheckCircle2, 
-  AlertTriangle, 
-  RefreshCw, 
-  Server, 
-  Zap, 
-  Database, 
-  Mail, 
-  MessageSquare, 
-  Cpu, 
-  Play, 
-  ArrowRight,
-  ShieldCheck,
-  Radio,
-  Terminal
-} from 'lucide-react';
+import Plasma from './components/Plasma';
 
-function App() {
-  const [health, setHealth] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState([]);
-  const [lastCheck, setLastCheck] = useState(null);
-  const [simulating, setSimulating] = useState(false);
+export default function App() {
+  const [authState, setAuthState] = useState({ loading: true, authenticated: false, user: null });
+  const [systemStatus, setSystemStatus] = useState({ connectedAccounts: [] });
+  const [waStatus, setWaStatus] = useState({ status: 'checking', phone: null, pushName: null, qr: null });
+  const [waLoading, setWaLoading] = useState(false);
+  const [notionSetup, setNotionSetup] = useState({ apiKey: '', parentPage: '', loading: false, result: null, error: null });
+  const [toast, setToast] = useState(null);
 
-  const fetchHealth = async () => {
-    setLoading(true);
+  // Check auth state from SQLite session
+  const checkAuth = async () => {
     try {
-      const res = await fetch('/health');
+      const res = await fetch('/auth/me');
       const data = await res.json();
-      setHealth(data);
-      setLastCheck(new Date().toLocaleTimeString());
-      addLog(`Fetched health status: ${data.service} [${data.status}]`, 'success');
+      if (data.authenticated && data.user) {
+        setAuthState({ loading: false, authenticated: true, user: data.user });
+        fetchSystemStatus();
+        fetchWhatsAppStatus();
+      } else {
+        setAuthState({ loading: false, authenticated: false, user: null });
+      }
     } catch (err) {
-      addLog(`Failed to fetch engine health: ${err.message}`, 'error');
-      setHealth({
-        status: 'offline',
-        service: 'Kairos Engine (Unreachable)',
-        timestamp: new Date().toISOString(),
-        integrations: {
-          notion: 'offline',
-          openwa: 'offline',
-          gmail: 'unconfigured',
-          openrouter: 'unconfigured'
-        }
-      });
-    } finally {
-      setLoading(false);
+      console.warn('Auth check error:', err);
+      setAuthState({ loading: false, authenticated: false, user: null });
     }
   };
 
-  const addLog = (message, type = 'info') => {
-    const time = new Date().toLocaleTimeString();
-    setLogs(prev => [{ id: Date.now(), time, message, type }, ...prev.slice(0, 19)]);
+  const fetchSystemStatus = async () => {
+    try {
+      const res = await fetch('/auth/system/status');
+      const data = await res.json();
+      setSystemStatus(data);
+    } catch (err) {
+      console.warn('System status error:', err);
+    }
   };
 
-  const triggerSimulation = async (type) => {
-    setSimulating(true);
-    addLog(`Initiating simulation event [${type}]...`, 'info');
+  const fetchWhatsAppStatus = async (userInitiated = false) => {
     try {
-      let endpoint = '/webhooks/simulate';
-      let payload = { type };
-      
-      if (type === 'health') {
-        await fetchHealth();
-        setSimulating(false);
-        return;
-      }
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch('/auth/whatsapp/status');
       const data = await res.json();
-      addLog(`Simulation result [${type}]: ${JSON.stringify(data)}`, 'success');
+      setWaStatus(data);
     } catch (err) {
-      addLog(`Simulation failed: ${err.message}`, 'error');
-    } finally {
-      setSimulating(false);
+      setWaStatus({ status: 'offline', error: err.message });
     }
   };
 
   useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 15000);
+    checkAuth();
+    const interval = setInterval(() => {
+      if (authState.authenticated) {
+        fetchSystemStatus();
+        fetchWhatsAppStatus();
+      }
+    }, 12000);
     return () => clearInterval(interval);
-  }, []);
+  }, [authState.authenticated]);
 
-  const getStatusBadge = (status) => {
-    if (status === 'connected' || status === 'configured' || status === 'online') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          {status.toUpperCase()}
-        </span>
-      );
+  const handleLogout = async () => {
+    try {
+      await fetch('/auth/logout', { method: 'POST' });
+      setAuthState({ loading: false, authenticated: false, user: null });
+      setToast({ type: 'info', message: 'You have been signed out successfully.' });
+    } catch (err) {
+      alert('Logout failed: ' + err.message);
     }
-    if (status === 'degraded') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-          <AlertTriangle className="w-3.5 h-3.5" />
-          DEGRADED
-        </span>
-      );
+  };
+
+  const handleNotionSetup = async (e) => {
+    e.preventDefault();
+    if (!notionSetup.apiKey || !notionSetup.parentPage) {
+      setNotionSetup(prev => ({ ...prev, error: 'Please enter both Notion Secret Token and Parent Page URL.' }));
+      return;
     }
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-        <AlertTriangle className="w-3.5 h-3.5" />
-        {status.toUpperCase()}
-      </span>
-    );
+    setNotionSetup(prev => ({ ...prev, loading: true, error: null, result: null }));
+    try {
+      const res = await fetch('/auth/notion/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notionApiKey: notionSetup.apiKey,
+          parentPageInput: notionSetup.parentPage
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotionSetup(prev => ({ ...prev, loading: false, result: 'All 5 databases initialized successfully in your Notion page!' }));
+        fetchSystemStatus();
+      } else {
+        setNotionSetup(prev => ({ ...prev, loading: false, error: data.error || 'Setup failed' }));
+      }
+    } catch (err) {
+      setNotionSetup(prev => ({ ...prev, loading: false, error: err.message }));
+    }
+  };
+
+  const handleConnectWhatsApp = async () => {
+    setWaLoading(true);
+    await fetchWhatsAppStatus(true);
+    setWaLoading(false);
+  };
+
+  const handleDisconnectWhatsApp = async () => {
+    if (!confirm('Are you sure you want to log out of WhatsApp?')) return;
+    try {
+      await fetch('/auth/whatsapp/disconnect', { method: 'POST' });
+      setToast({ type: 'info', message: 'WhatsApp session logged out.' });
+      fetchWhatsAppStatus();
+    } catch (err) {
+      alert('Disconnect error: ' + err.message);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Top Header Navigation */}
-        <header className="glass-panel p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xl border border-slate-800">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg glow-cyan">
-              <Zap className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                  Kairos Engine
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  v2.0 Operations
-                </span>
-              </div>
-              <p className="text-sm text-slate-400 mt-0.5">
-                Autonomous AI Operations Interface & Notion Action Pipeline
-              </p>
-            </div>
-          </div>
+    <div className="relative min-h-screen w-full bg-[#07090e] text-slate-100 flex flex-col font-sans overflow-x-hidden selection:bg-cyan-500 selection:text-black">
+      
+      {/* Background WebGL Plasma Shader */}
+      <div className="fixed inset-0 z-0 pointer-events-auto opacity-70">
+        <Plasma 
+          color="#06b6d4" 
+          speed={0.65} 
+          scale={1.2} 
+          opacity={0.8} 
+          renderScale={0.6}
+          iterations={45} 
+        />
+      </div>
 
-          <div className="flex items-center gap-3 self-end md:self-center">
-            <div className="text-right hidden sm:block">
-              <p className="text-xs text-slate-400">Last Synced</p>
-              <p className="text-xs font-mono font-medium text-slate-200">{lastCheck || 'Syncing...'}</p>
-            </div>
-            <button
-              onClick={fetchHealth}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 text-sm font-medium rounded-xl border border-slate-700 transition duration-150 disabled:opacity-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
-              Refresh Status
-            </button>
-          </div>
-        </header>
-
-        {/* Integration Status Grid */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-              <Server className="w-5 h-5 text-cyan-400" />
-              Integration Health Matrix
-            </h2>
-            {health && (
-              <span className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                Live Poller Active
+      {/* Floating Glassmorphic Header */}
+      <header className="relative z-20 w-full px-6 py-4 flex items-center justify-between border-b border-white/10 bg-[#07090e]/70 backdrop-blur-xl sticky top-0 shadow-2xl">
+        <div className="flex items-center gap-3">
+          <img 
+            src="/kairos logo transparent.png" 
+            alt="Kairos Logo" 
+            className="w-10 h-10 object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]" 
+          />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-cyan-400 bg-clip-text text-transparent">
+                KAIROS
               </span>
-            )}
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                Operations Engine
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">Autonomous AI & Notion Control Interface</p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Notion Database */}
-            <div className="glass-card p-5 rounded-xl border border-slate-800 hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-400 border border-purple-500/20">
-                  <Database className="w-5 h-5" />
-                </div>
-                {getStatusBadge(health?.integrations?.notion || 'checking')}
-              </div>
-              <h3 className="font-semibold text-slate-200 text-base">Notion Workspace</h3>
-              <p className="text-xs text-slate-400 mt-1">Inbox, Invoices & Requests Databases</p>
-            </div>
-
-            {/* WhatsApp Gateway */}
-            <div className="glass-card p-5 rounded-xl border border-slate-800 hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                {getStatusBadge(health?.integrations?.openwa || 'checking')}
-              </div>
-              <h3 className="font-semibold text-slate-200 text-base">OpenWA Gateway</h3>
-              <p className="text-xs text-slate-400 mt-1">Port 2785 Inbound & Outbound Webhook</p>
-            </div>
-
-            {/* Gmail API */}
-            <div className="glass-card p-5 rounded-xl border border-slate-800 hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400 border border-rose-500/20">
-                  <Mail className="w-5 h-5" />
-                </div>
-                {getStatusBadge(health?.integrations?.gmail || 'checking')}
-              </div>
-              <h3 className="font-semibold text-slate-200 text-base">Gmail API Watch</h3>
-              <p className="text-xs text-slate-400 mt-1">Pub/Sub Notifications & Auto Sync</p>
-            </div>
-
-            {/* OpenRouter AI */}
-            <div className="glass-card p-5 rounded-xl border border-slate-800 hover:border-slate-700 transition">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400 border border-cyan-500/20">
-                  <Cpu className="w-5 h-5" />
-                </div>
-                {getStatusBadge(health?.integrations?.openrouter || 'checking')}
-              </div>
-              <h3 className="font-semibold text-slate-200 text-base">OpenRouter AI</h3>
-              <p className="text-xs text-slate-400 mt-1">Gemini / Claude Pipeline Processor</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Workflow & Action Controls Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Simulator & Action Controls */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                <Play className="w-5 h-5 text-cyan-400" />
-                Diagnostic Console
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Trigger manual test webhooks and inspect real-time server response.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => triggerSimulation('health')}
-                disabled={simulating}
-                className="w-full flex items-center justify-between p-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700/80 transition text-sm font-medium"
-              >
-                <span className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  Run Engine Diagnostics
-                </span>
-                <ArrowRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => triggerSimulation('whatsapp_inbound')}
-                disabled={simulating}
-                className="w-full flex items-center justify-between p-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700/80 transition text-sm font-medium"
-              >
-                <span className="flex items-center gap-2.5">
-                  <MessageSquare className="w-4 h-4 text-emerald-400" />
-                  Simulate WhatsApp Inbound
-                </span>
-                <ArrowRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => triggerSimulation('gmail_sync')}
-                disabled={simulating}
-                className="w-full flex items-center justify-between p-3.5 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl border border-slate-700/80 transition text-sm font-medium"
-              >
-                <span className="flex items-center gap-2.5">
-                  <Mail className="w-4 h-4 text-rose-400" />
-                  Trigger Gmail Sync
-                </span>
-                <ArrowRight className="w-4 h-4 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800">
-              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Pipeline Architecture
-              </h4>
-              <ol className="text-xs text-slate-300 space-y-2 list-decimal list-inside">
-                <li>Inbound Webhook received (Gmail / WhatsApp)</li>
-                <li>OpenRouter AI structures raw message & draft</li>
-                <li>Notion item created with status <code className="text-purple-300 font-mono">new</code></li>
-                <li>User updates status to <code className="text-emerald-300 font-mono">approved</code></li>
-                <li>Background Poller dispatches reply automatically</li>
-              </ol>
-            </div>
-          </div>
-
-          {/* Activity Log Stream */}
-          <div className="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-200 flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-cyan-400" />
-                  Live Event Stream
-                </h3>
-                <span className="text-xs font-mono text-slate-400">
-                  {logs.length} events logged
-                </span>
-              </div>
-
-              <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 font-mono text-xs max-h-80 overflow-y-auto space-y-2.5 scrollbar-thin">
-                {logs.length === 0 ? (
-                  <p className="text-slate-500 italic py-4 text-center">
-                    No activity logged yet. Click "Refresh Status" or trigger a diagnostic simulation.
-                  </p>
-                ) : (
-                  logs.map(log => (
-                    <div key={log.id} className="flex items-start gap-3 border-b border-slate-900 pb-2 last:border-0 last:pb-0">
-                      <span className="text-slate-500 shrink-0">{log.time}</span>
-                      <span className={
-                        log.type === 'success' ? 'text-emerald-400' :
-                        log.type === 'error' ? 'text-rose-400' : 'text-slate-300'
-                      }>
-                        {log.message}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Express Server Port: <strong className="text-slate-200">3000</strong></span>
-              </div>
-              <div>
-                <span>Vite Dev Proxy: <strong className="text-slate-200">5173</strong></span>
-              </div>
-            </div>
-          </div>
-
         </div>
 
-      </div>
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            System Online (:3000)
+          </div>
+
+          {authState.authenticated && authState.user && (
+            <div className="flex items-center gap-3 pl-3 border-l border-white/10">
+              <img 
+                src={authState.user.picture || 'https://lh3.googleusercontent.com/a/default-user'} 
+                alt="User Avatar" 
+                className="w-8 h-8 rounded-full border border-cyan-400/50 shadow-sm"
+              />
+              <div className="hidden md:flex flex-col text-left">
+                <span className="text-xs font-semibold text-white leading-tight">{authState.user.name}</span>
+                <span className="text-[11px] text-slate-400 leading-tight">{authState.user.email}</span>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="text-xs px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all cursor-pointer font-medium"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main View Area */}
+      <main className="relative z-10 flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-center">
+
+        {/* Toast Alert */}
+        {toast && (
+          <div className="mb-6 p-4 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 flex items-center justify-between backdrop-blur-md animate-fadeIn">
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-cyan-300 font-bold ml-4 cursor-pointer">✕</button>
+          </div>
+        )}
+
+        {/* VIEW 1: Full-Screen Authentication Gate */}
+        {!authState.authenticated ? (
+          <div className="w-full max-w-xl mx-auto my-auto flex flex-col items-center text-center">
+            
+            <div className="w-full bg-[#0d1527]/80 border border-white/15 rounded-3xl p-8 sm:p-10 backdrop-blur-2xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] relative overflow-hidden">
+              
+              {/* Glowing Accent Top Bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-blue-500"></div>
+
+              {/* Logo Glow */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-cyan-500/30 blur-2xl rounded-full scale-110"></div>
+                <img 
+                  src="/kairos logo transparent.png" 
+                  alt="Kairos Logo" 
+                  className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-[0_0_25px_rgba(6,182,212,0.8)] animate-pulse"
+                />
+              </div>
+
+              <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
+                Welcome to Kairos
+              </h2>
+              <p className="text-sm text-slate-300 mb-8 max-w-md mx-auto leading-relaxed">
+                Connect your business communication channels with 1-click Google Sign-in to enable autonomous Gmail, WhatsApp, and Notion operations.
+              </p>
+
+              {/* Feature Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left mb-8 text-xs text-slate-300">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <span className="text-cyan-400 text-base">✉️</span>
+                  <span><strong>Unified Gmail AI</strong><br/><span className="text-slate-400">Real-time Pub/Sub sync</span></span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <span className="text-emerald-400 text-base">💬</span>
+                  <span><strong>WhatsApp Gateway</strong><br/><span className="text-slate-400">Anti-ban & group support</span></span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <span className="text-purple-400 text-base">📑</span>
+                  <span><strong>5 Notion Databases</strong><br/><span className="text-slate-400">Human approval gates</span></span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-2.5">
+                  <span className="text-blue-400 text-base">🗄️</span>
+                  <span><strong>SQLite Persistence</strong><br/><span className="text-slate-400">Isolated multi-tenant data</span></span>
+                </div>
+              </div>
+
+              {/* Sign in with Google Button */}
+              <a 
+                href="/auth/google/login"
+                className="w-full py-4 px-6 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-bold text-base flex items-center justify-center gap-3 transition-all duration-200 transform hover:-translate-y-0.5 shadow-[0_10px_25px_rgba(255,255,255,0.2)] cursor-pointer"
+              >
+                <svg width="20" height="20" viewBox="0 0 18 18">
+                  <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.61z"/>
+                  <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.19l-2.92-2.26c-.8.54-1.83.87-3.04.87-2.34 0-4.32-1.58-5.03-3.71H.96v2.33C2.44 15.98 5.48 18 9 18z"/>
+                  <path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.12-.28-1.71s.1-1.17.28-1.71V4.96H.96A8.996 8.996 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33z"/>
+                  <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.96l3.01 2.33c.71-2.13 2.69-3.71 5.03-3.71z"/>
+                </svg>
+                Sign in with Google
+              </a>
+
+              <p className="text-[11px] text-slate-400 mt-4">
+                Grants identity verification and Gmail API permissions in one unified step.
+              </p>
+            </div>
+          </div>
+        ) : (
+
+          /* VIEW 2: Authenticated Operations Hub */
+          <div className="flex flex-col gap-6 animate-fadeIn">
+            
+            {/* Dashboard Hero Banner */}
+            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-r from-[#121c33]/90 via-[#0e1628]/90 to-[#16122d]/90 border border-white/15 backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-2">
+                  Operations & Channel Hub
+                </h2>
+                <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+                  Your business communication channels are connected. Notion acts as your human review interface while Kairos executes autonomous background workflows.
+                </p>
+              </div>
+              <a 
+                href="https://notion.so" 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-5 py-2.5 rounded-xl border border-cyan-400/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 font-semibold text-sm transition-all whitespace-nowrap shadow-lg"
+              >
+                📑 Open Notion Workspace ↗
+              </a>
+            </div>
+
+            {/* 3-Column Onboarding & Management Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Card 1: 1-Click Notion Setup Wizard */}
+              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-blue-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
+                      <span className="text-xl">📑</span> 1-Click Notion Setup
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      Ready
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                    Instantly construct and link your 5 operational databases inside your Notion workspace.
+                  </p>
+
+                  <form onSubmit={handleNotionSetup} className="space-y-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Notion Secret Token
+                      </label>
+                      <input 
+                        type="password"
+                        placeholder="ntn_..."
+                        value={notionSetup.apiKey}
+                        onChange={e => setNotionSetup(prev => ({ ...prev, apiKey: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                        Parent Page URL
+                      </label>
+                      <input 
+                        type="text"
+                        placeholder="https://notion.so/Kairos-Hub-..."
+                        value={notionSetup.parentPage}
+                        onChange={e => setNotionSetup(prev => ({ ...prev, parentPage: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    {notionSetup.error && (
+                      <p className="text-xs text-red-400">{notionSetup.error}</p>
+                    )}
+                    {notionSetup.result && (
+                      <p className="text-xs text-emerald-400 font-medium">{notionSetup.result}</p>
+                    )}
+
+                    <button 
+                      type="submit"
+                      disabled={notionSetup.loading}
+                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs tracking-wide transition-all shadow-md cursor-pointer disabled:opacity-50"
+                    >
+                      {notionSetup.loading ? '⏳ Constructing 5 Databases...' : '⚡ Auto-Create All 5 Databases'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Card 2: Gmail Integration Status */}
+              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-cyan-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
+                      <span className="text-xl">✉️</span> Gmail Integration
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                    Active Google Cloud Pub/Sub & 20s polling listener. Analyzes incoming emails, discards marketing spam, and stages replies in Notion.
+                  </p>
+
+                  <div className="p-3 rounded-xl bg-black/30 border border-white/10 text-xs text-cyan-300 mb-4 font-mono">
+                    Active Mailbox: {authState.user.email}
+                  </div>
+                </div>
+
+                <a 
+                  href="/auth/google/login"
+                  className="w-full py-2.5 rounded-xl border border-white/20 hover:bg-white/10 text-slate-200 font-semibold text-xs text-center transition-all cursor-pointer"
+                >
+                  🔄 Switch / Re-Authenticate Account
+                </a>
+              </div>
+
+              {/* Card 3: WhatsApp Web Gateway */}
+              <div className="p-6 rounded-2xl bg-[#0f172a]/80 border border-emerald-500/30 backdrop-blur-xl flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2.5 font-bold text-lg text-white">
+                      <span className="text-xl">💬</span> WhatsApp Gateway
+                    </div>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase border ${
+                      waStatus.phone ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}>
+                      {waStatus.phone ? 'Connected' : 'Scan Required'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                    Self-hosted OpenWA Web Anti-Ban Gateway on port 2785. Supports direct chats, WhatsApp groups, and media documents.
+                  </p>
+
+                  {waStatus.phone ? (
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 font-mono mb-4">
+                      Paired Device: {waStatus.pushName || 'WhatsApp User'} (+{waStatus.phone})
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center my-3">
+                      <div className="p-3 bg-white rounded-xl shadow-lg inline-block">
+                        <img 
+                          src={`/auth/whatsapp/qr.png?t=${Date.now()}`} 
+                          alt="WhatsApp QR Code" 
+                          className="w-36 h-36 object-contain"
+                        />
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2">
+                        Scan with <strong>WhatsApp &gt; Linked Devices</strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <button 
+                    onClick={handleConnectWhatsApp}
+                    disabled={waLoading}
+                    className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md cursor-pointer disabled:opacity-50"
+                  >
+                    {waLoading ? '⏳ Checking QR...' : '🔄 Refresh WhatsApp Connection'}
+                  </button>
+                  {waStatus.phone && (
+                    <button 
+                      onClick={handleDisconnectWhatsApp}
+                      className="w-full py-2 rounded-xl border border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs transition-all cursor-pointer"
+                    >
+                      🔌 Disconnect WhatsApp
+                    </button>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* 5-Database Infrastructure Matrix */}
+            <div className="mt-4">
+              <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                <span>🗄️</span> 5 Operational Databases
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <h4 className="font-bold text-xs text-white mb-1">📗 Run Log</h4>
+                  <p className="text-[11px] text-slate-400 leading-snug">Real-time audit records & diagnostic traces.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <h4 className="font-bold text-xs text-white mb-1">📄 Invoices</h4>
+                  <p className="text-[11px] text-slate-400 leading-snug">Flow A: Invoicing, approval gates & PDF dispatch.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <h4 className="font-bold text-xs text-white mb-1">✅ Tasks</h4>
+                  <p className="text-[11px] text-slate-400 leading-snug">Flow B: Meeting action items & assignee routing.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <h4 className="font-bold text-xs text-white mb-1">📥 Requests</h4>
+                  <p className="text-[11px] text-slate-400 leading-snug">Flow C: Inbound communications & draft responses.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                  <h4 className="font-bold text-xs text-white mb-1">📂 Documents</h4>
+                  <p className="text-[11px] text-slate-400 leading-snug">Central asset storage from WhatsApp & Email.</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-20 py-4 text-center text-xs text-slate-500 border-t border-white/10 bg-[#07090e]/80 backdrop-blur-md">
+        Kairos Autonomous Operations Hub &bull; Powered by React, Vite, WebGL & Notion API
+      </footer>
+
     </div>
   );
 }
-
-export default App;
