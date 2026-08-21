@@ -399,6 +399,205 @@
       "notion_page_id": "3c23cc96-4d1f-81d4-9320-f5e5c5a63ffd",
       "error": null,
       "updatedAt": "2026-08-20T19:17:05.352Z"
+    },
+    {
+      "id": "test_mail_1787280152531",
+      "source": "email",
+      "sender": "sponsor.lead@techcorp.io",
+      "raw_content": "Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Please send over the invoice and bank transfer details before Friday so our accounts team can disburse payment.\n\nRegards,\nAlex Vance\nHead of Partnerships",
+      "received_at": "2026-08-21T02:42:32.533Z",
+      "status": "new",
+      "structured_data": null,
+      "notion_page_id": null,
+      "error": null
+    },
+    {
+      "id": "test_mail_1787280305784",
+      "source": "email",
+      "sender": "sponsor.lead@techcorp.io",
+      "raw_content": "Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Please send over the invoice and bank transfer details before Friday so our accounts team can disburse payment.\n\nRegards,\nAlex Vance\nHead of Partnerships",
+      "received_at": "2026-08-21T02:45:05.790Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Meeting Request: \"Hi Lovekesh,\nWe would like to confi...\"",
+        "category": "Meeting",
+        "priority": "Medium",
+        "summary": "Inbound email message received from sponsor.lead@techcorp.io: \"Hi Lovekesh,\nWe would like to confirm our Platinum Sponsorship of $5,000 for the upcoming event. Ple\".",
+        "draftResponse": "Yeah, let's schedule! I have noted this and added it to our calendar. Looking forward to connecting."
+      },
+      "notion_page_id": "3c33cc96-4d1f-8199-8530-c21440117a70",
+      "error": null,
+      "updatedAt": "2026-08-21T02:45:06.532Z"
+    },
+    {
+      "id": "item_1787280307554_rm9zu",
+      "source": "meeting_transcript",
+      "sender": "Meeting Recorder",
+      "raw_content": "\nLovekesh: \"Welcome everyone. Let's assign action items for tomorrow's demo.\"\nRohan: \"I will finish testing the OpenWA gateway pairing with our test number.\"\nPriya: \"I will upload the sample client invoice to Notion and set up the approval status.\"\nLovekesh: \"Awesome. I'll make sure the live Run Log timestamps are verified.\"\n",
+      "received_at": "2026-08-21T02:45:07.554Z",
+      "status": "structured",
+      "structured_data": {
+        "meetingSummary": "Meeting transcript received and staged.",
+        "tasks": [
+          {
+            "task": "Review meeting transcript and assign pending items",
+            "owner": "Unassigned",
+            "dueDate": null,
+            "reasoning": "Automated fallback task for transcript review."
+          }
+        ]
+      },
+      "notion_page_id": null,
+      "error": null,
+      "updatedAt": "2026-08-21T02:45:09.556Z"
+    },
+    {
+      "id": "sim_1787301641067",
+      "source": "whatsapp",
+      "sender": "918929750553",
+      "raw_content": "Hello, could you please send me the updated invoice for our project?",
+      "received_at": "2026-08-21T08:40:41.071Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "WhatsApp from 918929750553",
+        "category": "Billing",
+        "priority": "Medium",
+        "summary": "Inbound whatsapp message received from 918929750553: \"Hello, could you please send me the updated invoice for our project?\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c33cc96-4d1f-8124-97d7-dda93e1604b7",
+      "error": null,
+      "updatedAt": "2026-08-21T08:40:41.605Z"
+    },
+    {
+      "id": "item_1787301642571_5kx93",
+      "source": "meeting_transcript",
+      "sender": "Meeting Recorder",
+      "raw_content": "Client: \"Please send the agreement by Monday.\" Manager: \"Sure, Alex will handle that.\"",
+      "received_at": "2026-08-21T08:40:42.571Z",
+      "status": "structured",
+      "structured_data": {
+        "meetingSummary": "Meeting transcript received and staged.",
+        "tasks": [
+          {
+            "task": "Review meeting transcript and assign pending items",
+            "owner": "Unassigned",
+            "dueDate": null,
+            "reasoning": "Automated fallback task for transcript review."
+          }
+        ]
+      },
+      "notion_page_id": null,
+      "error": null,
+      "updatedAt": "2026-08-21T08:40:43.036Z"
+    },
+    {
+      "id": "gmail_1a0237d51fe6be7c",
+      "source": "email",
+      "sender": "sweta <shalupal3304@gmail.com>",
+      "raw_content": "Hello!\n\nThis is an automated verification email sent by your Kairos Engine running on Node.js.\n\nTimestamp: 2026-08-21T08:43:28.712Z\nStatus: All Gmail API scopes verified!",
+      "received_at": "2026-08-21T08:43:30.907Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Ã¢Â Â³ Kairos Automated Integration Diagnostic",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound email message received from sweta <shalupal3304@gmail.com>: \"Hello!\n\nThis is an automated verification email sent by your Kairos Engine running on Node.js.\n\nTime\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c33cc96-4d1f-8167-8e0b-ebd26ff441da",
+      "error": null,
+      "updatedAt": "2026-08-21T08:50:21.741Z"
+    },
+    {
+      "id": "gmail_1a0238187c750126",
+      "source": "email",
+      "sender": "Sweta <swetapal3304@gmail.com>",
+      "raw_content": "Hello dear\r\n\r\nHope u are doing great  i wanted  to inform u that u are been  fired",
+      "received_at": "2026-08-21T08:50:17.219Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Email from Sweta <swetapal3304@gmail.com>",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound email message received from Sweta <swetapal3304@gmail.com>: \"Hello dear\r\n\r\nHope u are doing great  i wanted  to inform u that u are been  fired\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c33cc96-4d1f-81cf-b1f1-f8ea4307af96",
+      "error": null,
+      "updatedAt": "2026-08-21T08:50:17.821Z"
+    },
+    {
+      "id": "gmail_1a02380c7fb79e81",
+      "source": "email",
+      "sender": "Lovekesh Anand <lovekeshanand6@gmail.com>",
+      "raw_content": "Can we schedule a meeting 3:30 PM on sunday?",
+      "received_at": "2026-08-21T08:50:18.883Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Meeting Request: \"Can we schedule a meeting 3:30 PM o...\"",
+        "category": "Meeting",
+        "priority": "Medium",
+        "summary": "Inbound email message received from Lovekesh Anand <lovekeshanand6@gmail.com>: \"Can we schedule a meeting 3:30 PM on sunday?\".",
+        "draftResponse": "Yeah, let's schedule! I have noted this and added it to our calendar. Looking forward to connecting."
+      },
+      "notion_page_id": "3c33cc96-4d1f-81b8-9de7-e8a759503ccf",
+      "error": null,
+      "updatedAt": "2026-08-21T08:50:20.118Z"
+    },
+    {
+      "id": "gmail_1a0237d51fe6be7c",
+      "source": "email",
+      "sender": "sweta <shalupal3304@gmail.com>",
+      "raw_content": "Hello!\n\nThis is an automated verification email sent by your Kairos Engine running on Node.js.\n\nTimestamp: 2026-08-21T08:43:28.712Z\nStatus: All Gmail API scopes verified!",
+      "received_at": "2026-08-21T08:50:21.144Z",
+      "status": "new",
+      "structured_data": null,
+      "notion_page_id": null,
+      "error": null
+    },
+    {
+      "id": "gmail_1a0234ef8a04f709",
+      "source": "email",
+      "sender": "Google Antigravity <antigravity-noreply@google.com>",
+      "raw_content": "Hello from Antigravity\r\n\r\nIf you no longer wish to receive our emails, please use the link below to  \r\nunsubscribe:\r\nhttps://myaccount.google.com/communication-preferences/unsubscribe/gt/ACT4xYyVZqUTvXSf4j37RcNFHG4KLBTijOVdQ7-261zPiJCRM7010sZ7KYAn-UGfHIlkxcilzQ2_sCpzOj4d7sWx0TxhkNrYy36QLA-pyvtv-qPJmHf_wYxa5O-V2vcx_cByupzN5kNbACqrR0VEmVwYQZfEdIDsq7waXaCKsm6sI_hn-h_wl7Z7PtuGjIuo5RXImebgRMM317Qt4b6NJT6GB8Khm3iac-M2Jv1qpxbWeAnVgCqKEVbLU-mlIYyRat7BXHHZvCLF?utm_source=gm&utm_medium=email&auto=true",
+      "received_at": "2026-08-21T08:50:23.479Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Get started with Google Antigravity",
+        "category": "General",
+        "priority": "Medium",
+        "summary": "Inbound email message received from Google Antigravity <antigravity-noreply@google.com>: \"Hello from Antigravity\r\n\r\nIf you no longer wish to receive our emails, please use the link below to \".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c33cc96-4d1f-81a8-894a-f4267dde0ffc",
+      "error": null,
+      "updatedAt": "2026-08-21T08:50:24.015Z"
+    },
+    {
+      "id": "gmail_1a0223a4cce205ad",
+      "source": "email",
+      "sender": "Google <no-reply@accounts.google.com>",
+      "raw_content": "[image: Google]\r\nA new sign-in on Windows\r\n\r\n\r\nshalupal3304@gmail.com\r\nWe noticed a new sign-in to your Google Account on a Windows device. If\r\nthis was you, you don’t need to do anything. If not, we’ll help you secure\r\nyour account.\r\nCheck activity\r\n<https://accounts.google.com/AccountChooser?Email=shalupal3304@gmail.com&continue=https://myaccount.google.com/alert/nt/1787280639164?rfn%3D325%26rfnc%3D1%26eid%3D8430231765346429984%26et%3D0>\r\nYou can also see security activity at\r\nhttps://myaccount.google.com/notifications\r\nYou received this email to let you know about important changes to your\r\nGoogle Account and services.\r\n© 2026 Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA",
+      "received_at": "2026-08-21T08:50:25.088Z",
+      "status": "pushed_to_notion",
+      "structured_data": {
+        "isNoise": false,
+        "title": "Security alert",
+        "category": "Support",
+        "priority": "Medium",
+        "summary": "Inbound email message received from Google <no-reply@accounts.google.com>: \"[image: Google]\r\nA new sign-in on Windows\r\n\r\n\r\nshalupal3304@gmail.com\r\nWe noticed a new sign-in to y\".",
+        "draftResponse": "Hi,\n\nThank you for reaching out. We have received your message and are reviewing it.\n\nBest regards,\nOperations Team"
+      },
+      "notion_page_id": "3c33cc96-4d1f-81b0-a174-d10ace40468d",
+      "error": null,
+      "updatedAt": "2026-08-21T08:50:25.795Z"
     }
   ],
   "idempotency_keys": {
@@ -437,12 +636,36 @@
     "req_approved_3c23cc96-4d1f-81d4-9320-f5e5c5a63ffd": {
       "processedAt": "2026-08-20T19:17:42.063Z",
       "title": "Request for a Phone Call"
+    },
+    "gmail_1a0237d51fe6be7c": {
+      "processedAt": "2026-08-21T08:43:30.903Z",
+      "subject": "Ã¢Â Â³ Kairos Automated Integration Diagnostic"
+    },
+    "req_approved_3c33cc96-4d1f-8167-8e0b-ebd26ff441da": {
+      "processedAt": "2026-08-21T09:01:06.753Z",
+      "title": "Ã¢Â Â³ Kairos Automated Integration Diagnostic"
+    },
+    "req_approved_3c33cc96-4d1f-81b8-9de7-e8a759503ccf": {
+      "processedAt": "2026-08-21T09:01:08.340Z",
+      "title": "Meeting Request: \"Can we schedule a meeting 3:30 PM o...\""
+    },
+    "req_approved_3c33cc96-4d1f-81cf-b1f1-f8ea4307af96": {
+      "processedAt": "2026-08-21T09:01:10.522Z",
+      "title": "Email from Sweta <swetapal3304@gmail.com>"
+    },
+    "req_approved_3c33cc96-4d1f-81fb-b248-dbc11a479adf": {
+      "processedAt": "2026-08-21T09:01:22.574Z",
+      "title": "Ã¢Â Â³ Kairos Automated Integration Diagnostic"
+    },
+    "inv_approved_3c33cc96-4d1f-816c-b1c6-e30061081cf4": {
+      "processedAt": "2026-08-21T09:04:50.539Z",
+      "invoiceName": "Invoice #TEST-999"
     }
   },
   "watch_state": {
-    "lastHistoryId": "1876791",
-    "watchExpiration": "1787858177538",
-    "lastRenewed": "2026-08-20T19:16:18.484Z"
+    "lastHistoryId": "4425",
+    "watchExpiration": "1787906609721",
+    "lastRenewed": "2026-08-21T08:43:28.670Z"
   },
   "processed_actions": {}
 }
