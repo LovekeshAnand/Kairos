@@ -43,13 +43,10 @@ function writeStore(data) {
   }
 }
 
-/**
- * Checks if an event/message has already been processed (idempotency guard)
- */
 function isProcessed(key) {
   if (!key) return false;
   const store = readStore();
-  return Boolean(store.idempotency_keys[key]);
+  return Boolean(store?.idempotency_keys?.[key]);
 }
 
 /**
@@ -58,6 +55,7 @@ function isProcessed(key) {
 function markProcessed(key, metadata = {}) {
   if (!key) return;
   const store = readStore();
+  if (!store.idempotency_keys) store.idempotency_keys = {};
   store.idempotency_keys[key] = {
     processedAt: new Date().toISOString(),
     ...metadata
