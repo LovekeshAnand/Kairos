@@ -11,6 +11,8 @@ const GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID;
 const GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET;
 const PORT = process.env.PORT || 3000;
 
+const dbService = require('../services/dbService');
+
 function getRedirectUri(req) {
   if (process.env.GMAIL_REDIRECT_URI) return process.env.GMAIL_REDIRECT_URI;
   const host = req.get('host') || `localhost:${PORT}`;
@@ -18,9 +20,67 @@ function getRedirectUri(req) {
   return `${protocol}://${host}/auth/google/callback`;
 }
 
+function parseCookies(req) {
+  const list = {};
+  const rc = req.headers.cookie;
+  if (rc) {
+    rc.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      list[parts.shift().trim()] = decodeURI(parts.join('='));
+    });
+  }
+  return list;
+}
+
+/**
+ * GET /auth/me
+ * Returns the currently authenticated user from SQLite session
+ */
+router.get('/me', (req, res) => {
+  try {
+    const cookies = parseCookies(req);
+    const sessionId = cookies['kairos_session'];
+    const session = dbService.getSession(sessionId);
+
+    if (!session) {
+      return res.json({ authenticated: false, user: null });
+    }
+
+    res.json({
+      authenticated: true,
+      user: {
+        id: session.user_id,
+        email: session.email,
+        name: session.name,
+        picture: session.picture
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ authenticated: false, error: err.message });
+  }
+});
+
+/**
+ * POST /auth/logout
+ * Destroys session in SQLite and clears cookie
+ */
+router.post('/logout', (req, res) => {
+  try {
+    const cookies = parseCookies(req);
+    const sessionId = cookies['kairos_session'];
+    if (sessionId) {
+      dbService.deleteSession(sessionId);
+    }
+    res.setHeader('Set-Cookie', 'kairos_session=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax');
+    res.json({ success: true, message: 'Logged out successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /**
  * GET /auth/google/login
- * Redirects user to Google OAuth2 Consent Screen
+ * Redirects user to Google OAuth2 Consent Screen (Unified Authentication + Gmail Access)
  */
 router.get('/google/login', (req, res) => {
   if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
@@ -40,11 +100,12 @@ router.get('/google/login', (req, res) => {
     access_type: 'offline',
     prompt: 'consent',
     scope: [
+      'openid',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
       'https://www.googleapis.com/auth/gmail.readonly',
       'https://www.googleapis.com/auth/gmail.send',
-      'https://www.googleapis.com/auth/gmail.modify',
-      'https://www.googleapis.com/auth/userinfo.email',
-      'https://www.googleapis.com/auth/userinfo.profile'
+      'https://www.googleapis.com/auth/gmail.modify'
     ]
   });
 
@@ -53,7 +114,7 @@ router.get('/google/login', (req, res) => {
 
 /**
  * GET /auth/google/callback
- * Handles Google OAuth redirect, stores token, and starts watch
+ * Handles Google OAuth redirect, creates SQLite user & session, sets cookie, starts watch
  */
 router.get('/google/callback', async (req, res) => {
   const { code, error } = req.query;
@@ -77,14 +138,31 @@ router.get('/google/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    // Fetch user profile
+    // Fetch user profile from Google
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
     const userInfo = await oauth2.userinfo.get();
     const userEmail = userInfo.data.email;
+    const userName = userInfo.data.name || 'Google User';
+    const userPicture = userInfo.data.picture || '';
 
-    console.log(`\n🎉 [Google OAuth] Successfully authorized Gmail account: ${userEmail}`);
+    console.log(`\n🎉 [Google OAuth] Successfully authenticated: ${userName} (${userEmail})`);
 
-    // Update .env securely (which is gitignored)
+    // 1. Upsert User in SQLite
+    const user = dbService.upsertUser({
+      email: userEmail,
+      name: userName,
+      picture: userPicture,
+      refreshToken: tokens.refresh_token,
+      accessToken: tokens.access_token
+    });
+
+    // 2. Create Active Session in SQLite
+    const session = dbService.createSession(user.id, 14);
+
+    // 3. Set Secure HTTP-Only Cookie
+    res.setHeader('Set-Cookie', `kairos_session=${session.sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600`);
+
+    // 4. Update .env securely for background services
     if (tokens.refresh_token) {
       const fs = require('fs');
       const path = require('path');
@@ -101,30 +179,38 @@ router.get('/google/callback', async (req, res) => {
       process.env.GMAIL_REFRESH_TOKEN = tokens.refresh_token;
     }
 
-    // Store only metadata in durable JSON state (no secrets stored in git-tracked files)
+    // 5. Store metadata in JSON store & SQLite Audit Log
     const currentData = storageService.getAllData();
     if (!currentData.connected_accounts) currentData.connected_accounts = {};
     currentData.connected_accounts[userEmail] = {
       connected: true,
       authorizedAt: new Date().toISOString(),
-      name: userInfo.data.name
+      name: userName
     };
     storageService.saveAllData(currentData);
 
-    // Start Gmail Watch
+    dbService.logAuditEvent({
+      userId: user.id,
+      flow: 'auth',
+      action: 'google_signin',
+      status: 'success',
+      summary: `User "${userEmail}" signed in and connected Gmail.`
+    });
+
+    // 6. Start Gmail Real-time Watch
     try {
       await gmailService.startGmailWatch();
     } catch (watchErr) {
       console.warn('⚠️ Could not immediately start watch:', watchErr.message);
     }
 
-    // Write to Notion Run Log
+    // 7. Write to Notion Run Log
     await notionService.writeRunLog({
       flow: 'reminders',
       triggerType: 'webhook',
       status: 'success',
-      summary: `Google Account "${userEmail}" successfully connected via OAuth onboarding.`,
-      relatedItemId: userEmail
+      summary: `User "${userName} (${userEmail})" signed in and connected operations hub.`,
+      relatedItemId: user.id
     });
 
     res.redirect(`/?auth_success=true&email=${encodeURIComponent(userEmail)}`);

@@ -146,17 +146,16 @@ Respond with a JSON object strictly matching this schema:
 }
 
 /**
- * Structure & Categorize Inbound WhatsApp Message (Supports Groups, LIDs, Hinglish & Spam Filter)
+ * Structure & Categorize Inbound WhatsApp Message (Supports Groups, LIDs, Hinglish & Actionable Staging)
  */
 async function structureWhatsApp({ sender, body = '', isGroup = false }) {
   const prompt = `
-Analyze the incoming WhatsApp message below. It may come from a direct contact or a group chat (${isGroup ? 'GROUP CHAT' : 'DIRECT CHAT'}).
-1. SPAM / NOISE FILTER RULES:
-   - If from a GROUP CHAT: Casual chat, gaming chatter ("counter strike", "game hai"), casual banter, meme reactions, "@all", "@everyone", "lol", "hahaha", "bro ppt kha...", "why you sweating", or general idle group conversation MUST be marked as "isNoise": true.
-   - If from a DIRECT CHAT: Casual single-word greetings or trivial acknowledgments ("ok", "k", "thanks", "gm", "gn", "hello", "hi", "bye", "cool", "alright") with no actionable question or task MUST be marked as "isNoise": true.
-2. ACTIONABLE MESSAGES:
-   - If the message is an explicit meeting request (e.g. "schedule a meeting for 4 PM", "bhai kal 4 baje milte hain"), an invoice/payment request, a technical support issue, or an urgent business inquiry, set "isNoise": false.
-3. If it is a meeting request, set category to "Meeting", extract the proposed time/day, and draft a friendly confirmation reply.
+Analyze the incoming WhatsApp message below. It comes from a ${isGroup ? 'GROUP CHAT' : 'DIRECT 1-ON-1 CHAT'}.
+1. NOISE RULES:
+   - For DIRECT 1-ON-1 CHAT: ALWAYS set "isNoise": false! Every direct incoming message from a contact is an actionable interaction that needs a courteous, friendly draft reply.
+   - For GROUP CHAT: Casual gaming chatter ("counter strike", "game hai", "lol", "hahaha", "@all") with zero questions/tasks can be marked "isNoise": true. Otherwise, set "isNoise": false.
+2. If it is a meeting request, set category to "Meeting". If billing/invoice, set "Billing". If support/question, set "Support". Otherwise, set "General".
+3. Write a polished, contextual, and helpful draft response ready for human approval.
 
 Sender: ${sender}
 Chat Type: ${isGroup ? 'Group Conversation' : 'Direct Message'}
@@ -168,7 +167,7 @@ ${body}
 Respond with a JSON object strictly matching this schema:
 {
   "isNoise": boolean,
-  "noiseReason": "group_casual_chatter" | "trivial_acknowledgment" | "spam_meme" | "none",
+  "noiseReason": "group_casual_chatter" | "none",
   "title": "Short descriptive title in English (max 8 words)",
   "category": "Meeting" | "Support" | "Billing" | "General" | "Urgent",
   "priority": "Low" | "Medium" | "High",
@@ -243,18 +242,16 @@ function heuristicFallback({ sender, subject = '', body = '', source = 'email', 
   const text = `${subject} ${body}`.toLowerCase().trim();
   
   // 1. Group Casual Chatter & Trivial Message Detection
-  const isTrivialAck = text.match(/^(ok|k|okay|thanks|thx|thank you|cool|alright|nice|done|got it|gm|gn|good morning|good night|hello|hi|hey|bye|yo|haha|hahaha|lol|lmao|xd|👍|🙏|❤️|🔥|@all|@everyone)$/i);
-  const isCasualGroupTalk = isGroup && (
-    text.match(/\b(counter strike|csgo|game|game hai|khelte|khel|sweating|bro ppt|kha submit|chalo|bhai|bhaiya ji|kinda motivated)\b/i) ||
-    (text.length < 25 && !text.match(/\b(meeting|call|invoice|bill|urgent|schedule|asap)\b/i))
-  );
+  // Note: For direct 1-on-1 WhatsApp chats and normal group queries, messages are staged into Requests DB.
+  const isTrivialAck = isGroup && text.match(/^(ok|k|okay|thanks|thx|cool|alright|nice|done|got it|haha|hahaha|lol|lmao|xd|👍|🙏|❤️|🔥|@all|@everyone)$/i);
+  const isCasualGroupTalk = isGroup && text.match(/\b(counter strike|csgo|game hai|khelte|khel|sweating|bro ppt|kinda motivated)\b/i);
 
   // Check if sender is an automated notification service, newsletter, or platform digest
-  const isAutomatedService = sender.match(/(noreply|no-reply|notifications|invitations|welcome|digest|news|newsletter|updates|alerts|editorpicks|support@.*\.com|hello@students|@medium\.com|@substack\.com|@devpost\.com|@spotify\.com|@linkedin\.com|@unstop\.news|@nytimes\.com|@accounts\.google\.com|@google\.com)/i);
+  const isAutomatedService = source === 'email' && sender.match(/(noreply|no-reply|notifications|invitations|welcome|digest|news|newsletter|updates|alerts|editorpicks|support@.*\.com|hello@students|@medium\.com|@substack\.com|@devpost\.com|@spotify\.com|@linkedin\.com|@unstop\.news|@nytimes\.com|@accounts\.google\.com|@google\.com)/i);
 
-  const isPromoOrDigestText = text.match(/\b(unsubscribe|view this email in your browser|daily digest|weekly digest|job alert|invitation to connect|hackathon|special offer|promotions|deals|privacy policy|terms of service)\b/i);
+  const isPromoOrDigestText = source === 'email' && text.match(/\b(unsubscribe|view this email in your browser|daily digest|weekly digest|job alert|invitation to connect|hackathon|special offer|promotions|deals|privacy policy|terms of service)\b/i);
 
-  const isActionablePersonal = !isAutomatedService && text.match(/\b(invoice|bill|payment|document|doc|pdf|receipt|contract|proposal|salary|help|request|send|meet|meeting|schedule|call|project|task|please)\b/i);
+  const isActionablePersonal = !isAutomatedService && text.match(/\b(invoice|bill|payment|document|doc|pdf|receipt|contract|proposal|salary|help|request|send|meet|meeting|schedule|call|project|task|please|hi|hello|hey)\b/i);
 
   let isNoise = false;
   let noiseReason = 'none';

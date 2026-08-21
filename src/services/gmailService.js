@@ -1,10 +1,29 @@
 const { google } = require('googleapis');
 const storageService = require('./storageService');
+const dbService = require('./dbService');
 require('dotenv').config();
 
-function getOAuth2Client() {
+function getActiveUser() {
+  try {
+    const stmt = dbService.db.prepare('SELECT id, email, name, refresh_token FROM users ORDER BY last_login_at DESC LIMIT 1');
+    const user = stmt.get();
+    if (user && user.refresh_token) {
+      return user;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function getOAuth2Client(explicitRefreshToken = null) {
   const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI, GMAIL_REFRESH_TOKEN } = process.env;
-  if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) {
+  if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET) {
+    return null;
+  }
+
+  const activeUser = getActiveUser();
+  const refreshToken = explicitRefreshToken || (activeUser ? activeUser.refresh_token : GMAIL_REFRESH_TOKEN);
+
+  if (!refreshToken) {
     return null;
   }
 
@@ -15,14 +34,14 @@ function getOAuth2Client() {
   );
 
   oauth2Client.setCredentials({
-    refresh_token: GMAIL_REFRESH_TOKEN
+    refresh_token: refreshToken
   });
 
   return oauth2Client;
 }
 
-function getGmailClient() {
-  const auth = getOAuth2Client();
+function getGmailClient(explicitRefreshToken = null) {
+  const auth = getOAuth2Client(explicitRefreshToken);
   if (!auth) return null;
   return google.gmail({ version: 'v1', auth });
 }
@@ -231,10 +250,12 @@ async function fetchAndProcessLatestEmails(limit = 5) {
 
     const messages = listRes.data.messages || [];
     const results = [];
+    const activeUser = getActiveUser();
+    const userScope = activeUser ? activeUser.email : 'default';
 
     for (const m of messages) {
-      const sourceId = `gmail_${m.id}`;
-      // Skip if already processed
+      const sourceId = `gmail_${userScope}_${m.id}`;
+      // Skip if already processed for this specific user
       if (storageService.isProcessed(sourceId)) {
         continue;
       }
@@ -281,5 +302,8 @@ module.exports = {
   fetchMessage,
   processHistoryUpdate,
   sendEmail,
-  fetchAndProcessLatestEmails
+  fetchAndProcessLatestEmails,
+  getGmailClient,
+  getActiveUser,
+  getOAuth2Client
 };
