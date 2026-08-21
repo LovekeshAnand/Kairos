@@ -73,32 +73,39 @@ app.use((err, req, res, next) => {
  * Automatically registers the Kairos webhook URL with OpenWA Gateway
  */
 async function registerOpenWAWebhook() {
-  const openwaUrl = process.env.OPENWA_API_URL || 'http://localhost:2785';
-  const openwaKey = process.env.OPENWA_API_KEY;
-  const sessionId = process.env.OPENWA_SESSION_ID;
-
-  if (!openwaKey || !sessionId) return;
+  const { apiKey, apiUrl } = whatsappService.getOpenWAConfig();
+  const webhookUrl = `http://localhost:${PORT}/webhooks/whatsapp`;
 
   try {
-    const webhookUrl = `http://localhost:${PORT}/webhooks/whatsapp`;
-    await axios.post(
-      `${openwaUrl}/api/sessions/${sessionId}/webhooks`,
-      {
-        url: webhookUrl,
-        events: ['message.received', 'message', 'session.status']
-      },
-      {
-        headers: {
-          'X-API-Key': openwaKey,
-          'Content-Type': 'application/json'
-        },
-        timeout: 6000
+    const sessRes = await axios.get(`${apiUrl}/api/sessions`, {
+      headers: { 'X-API-Key': apiKey },
+      timeout: 5000
+    });
+    const sessions = sessRes.data || [];
+    for (const s of sessions) {
+      const sid = s.id || s.name;
+      try {
+        await axios.post(
+          `${apiUrl}/api/sessions/${sid}/webhooks`,
+          {
+            url: webhookUrl,
+            events: ['message.received', 'session.status']
+          },
+          {
+            headers: {
+              'X-API-Key': apiKey,
+              'Content-Type': 'application/json'
+            },
+            timeout: 6000
+          }
+        );
+        console.log(`🔗 [OpenWA] Automatically registered webhook dispatcher for session (${sid}) -> ${webhookUrl}`);
+      } catch (regErr) {
+        // Status 409 (already registered) or status 400 is fine
       }
-    );
-    console.log(`🔗 [OpenWA] Automatically registered webhook dispatcher to: ${webhookUrl}`);
+    }
   } catch (err) {
-    // If webhook is already registered or endpoint differs, keep quiet
-    console.log(`ℹ️ [OpenWA] Webhook registration status: ${err.response?.status || err.message}`);
+    console.log(`ℹ️ [OpenWA] Webhook registration pending: ${err.message}`);
   }
 }
 

@@ -311,5 +311,6 @@ module.exports = {
   parseOpenWAWebhook,
   formatChatId,
   getQRCode,
-  disconnectSession
+  disconnectSession,
+  getOpenWAConfig
 };
