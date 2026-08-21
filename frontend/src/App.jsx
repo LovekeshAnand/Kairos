@@ -510,11 +510,18 @@ export default function App() {
               ) : (
                 <div className="p-6 rounded-xl bg-zinc-950/80 border border-zinc-800 flex flex-col items-center text-center">
                   <div className="p-2.5 bg-white rounded-xl shadow-lg inline-block mb-3">
-                    <img 
-                      src={`/auth/whatsapp/qr.png?t=${Date.now()}`} 
-                      alt="WhatsApp QR Code" 
-                      className="w-40 h-40 object-contain"
-                    />
+                    {waStatus.qr ? (
+                      <img 
+                        src={waStatus.qr.startsWith('data:') ? waStatus.qr : `/auth/whatsapp/qr.png?t=${Date.now()}`} 
+                        alt="WhatsApp QR Code" 
+                        className="w-44 h-44 object-contain"
+                      />
+                    ) : (
+                      <div className="w-44 h-44 flex flex-col items-center justify-center text-zinc-500 text-xs gap-2">
+                        <RefreshCw className="w-6 h-6 animate-spin text-emerald-500" />
+                        <span>Generating QR code...</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-xs text-zinc-300 font-medium">
                     Open WhatsApp on your phone &gt; Settings &gt; <strong>Linked Devices</strong> &gt; Scan QR Code

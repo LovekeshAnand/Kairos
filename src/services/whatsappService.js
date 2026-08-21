@@ -1,16 +1,26 @@
 const axios = require('axios');
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 
-const OPENWA_API_URL = process.env.OPENWA_API_URL || 'http://localhost:2785';
-const OPENWA_API_KEY = process.env.OPENWA_API_KEY;
-const OPENWA_SESSION_ID = process.env.OPENWA_SESSION_ID;
+function getOpenWAConfig() {
+  let apiKey = process.env.OPENWA_API_KEY;
+  if (!apiKey) {
+    const keyFile = path.join(__dirname, '../../openwa/data/.api-key');
+    if (fs.existsSync(keyFile)) {
+      try {
+        apiKey = fs.readFileSync(keyFile, 'utf-8').trim();
+      } catch (e) {}
+    }
+  }
+  if (!apiKey) apiKey = 'kairos-openwa-secret-key-2026';
+
+  const apiUrl = process.env.OPENWA_API_URL || 'http://localhost:2785';
+  const sessionId = process.env.OPENWA_SESSION_ID || 'default';
+  return { apiKey, apiUrl, sessionId };
+}
 
 /**
  * Normalizes phone number, group ID, or LID into proper WhatsApp chatId format
- * Supports:
- * - Direct contacts: 919876543210@c.us
- * - Group chats: 120363409582504727@g.us
- * - WhatsApp LIDs: 7370348429484@lid
  */
 function formatChatId(recipient) {
   if (!recipient) return null;
@@ -19,11 +29,9 @@ function formatChatId(recipient) {
     return clean;
   }
   const digits = clean.replace(/[^\d]/g, '');
-  // WhatsApp Group IDs start with 120363 or are 17+ digits
   if (digits.startsWith('120363') || digits.length >= 17) {
     return `${digits}@g.us`;
   }
-  // WhatsApp LIDs (13-16 digits without country code prefix)
   if (digits.length >= 13 && !digits.startsWith('91') && !digits.startsWith('1')) {
     return `${digits}@lid`;
   }
@@ -34,8 +42,9 @@ function formatChatId(recipient) {
  * Checks if OpenWA service is healthy and connected
  */
 async function checkOpenWAHealth() {
+  const { apiUrl } = getOpenWAConfig();
   try {
-    const res = await axios.get(`${OPENWA_API_URL}/api/health`, { timeout: 4000 });
+    const res = await axios.get(`${apiUrl}/api/health`, { timeout: 4000 });
     return { online: res.status === 200, data: res.data };
   } catch (err) {
     return { online: false, error: err.message };
@@ -50,13 +59,23 @@ async function sendWhatsAppMessage({ to, text }) {
     throw new Error('Missing "to" or "text" for WhatsApp message');
   }
 
+  const { apiKey, apiUrl, sessionId } = getOpenWAConfig();
   const chatId = formatChatId(to);
 
   // Anti-ban simulation: slight human delay before outbound send
   await new Promise(resolve => setTimeout(resolve, 1500));
 
   try {
-    const endpoint = `${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/messages/send-text`;
+    // Resolve active session id dynamically
+    let targetSessionId = sessionId;
+    try {
+      const sessRes = await axios.get(`${apiUrl}/api/sessions`, { headers: { 'X-API-Key': apiKey }, timeout: 4000 });
+      if (sessRes.data?.length > 0) {
+        targetSessionId = sessRes.data[0].id || sessRes.data[0].name || sessionId;
+      }
+    } catch (e) {}
+
+    const endpoint = `${apiUrl}/api/sessions/${targetSessionId}/messages/send-text`;
     const response = await axios.post(
       endpoint,
       {
@@ -65,7 +84,7 @@ async function sendWhatsAppMessage({ to, text }) {
       },
       {
         headers: {
-          'X-API-Key': OPENWA_API_KEY,
+          'X-API-Key': apiKey,
           'Content-Type': 'application/json'
         },
         timeout: 25000
@@ -88,13 +107,21 @@ async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', captio
     throw new Error('Missing "to" or "fileUrl" for WhatsApp media send');
   }
 
+  const { apiKey, apiUrl, sessionId } = getOpenWAConfig();
   const chatId = formatChatId(to);
 
   // Anti-ban debounce
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   try {
-    // Download file buffer or pass external url depending on format
+    let targetSessionId = sessionId;
+    try {
+      const sessRes = await axios.get(`${apiUrl}/api/sessions`, { headers: { 'X-API-Key': apiKey }, timeout: 4000 });
+      if (sessRes.data?.length > 0) {
+        targetSessionId = sessRes.data[0].id || sessRes.data[0].name || sessionId;
+      }
+    } catch (e) {}
+
     let base64Content = null;
     let mimeType = 'application/pdf';
 
@@ -106,7 +133,7 @@ async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', captio
       console.warn('⚠️ Could not download file buffer, falling back to direct URL:', fetchErr.message);
     }
 
-    const endpoint = `${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/messages/send-media`;
+    const endpoint = `${apiUrl}/api/sessions/${targetSessionId}/messages/send-media`;
     
     const payload = base64Content
       ? {
@@ -127,7 +154,7 @@ async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', captio
       payload,
       {
         headers: {
-          'X-API-Key': OPENWA_API_KEY,
+          'X-API-Key': apiKey,
           'Content-Type': 'application/json'
         },
         timeout: 30000
@@ -146,43 +173,50 @@ async function sendWhatsAppMedia({ to, fileUrl, filename = 'invoice.pdf', captio
  * Fetches QR code and session state from OpenWA for web onboarding
  */
 async function getQRCode() {
-  try {
-    let res = await axios.get(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}`, {
-      headers: { 'X-API-Key': OPENWA_API_KEY },
-      timeout: 5000
-    });
+  const { apiKey, apiUrl } = getOpenWAConfig();
+  const headers = { 'X-API-Key': apiKey };
 
-    // If disconnected, auto-start the session so OpenWA launches Puppeteer & generates the QR code
-    if (res.data?.status === 'disconnected' || !res.data?.engineLoaded) {
+  try {
+    // 1. Discover sessions
+    let sessionsRes = await axios.get(`${apiUrl}/api/sessions`, { headers, timeout: 5000 });
+    let sessions = sessionsRes.data || [];
+    let session = sessions.length > 0 ? sessions[0] : null;
+
+    // 2. If no session exists, create one
+    if (!session) {
+      const createRes = await axios.post(`${apiUrl}/api/sessions`, { name: 'default' }, { headers, timeout: 8000 });
+      session = createRes.data;
+    }
+
+    const sessionId = session.id || session.name || 'default';
+
+    // 3. If session is not started, start it
+    if (session.status === 'created' || session.status === 'disconnected') {
       try {
-        const startRes = await axios.post(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/start`, {}, {
-          headers: { 'X-API-Key': OPENWA_API_KEY },
-          timeout: 10000
-        });
-        res = startRes;
+        const startRes = await axios.post(`${apiUrl}/api/sessions/${sessionId}/start`, {}, { headers, timeout: 10000 });
+        session = startRes.data;
       } catch (startErr) {
-        console.warn('⚠️ Could not auto-start session:', startErr.message);
+        console.warn('⚠️ Could not start session:', startErr.message);
       }
     }
 
-    let qrCode = res.data?.qr || null;
-    if (!qrCode && (res.data?.status === 'qr_ready' || res.data?.status === 'disconnected' || !res.data?.phone)) {
+    // 4. Fetch QR code
+    let qrCode = session.qr || null;
+    if (!qrCode && (session.status === 'qr_ready' || session.status === 'created' || !session.phone)) {
       try {
-        const qrRes = await axios.get(`${OPENWA_API_URL}/api/sessions/${OPENWA_SESSION_ID}/qr`, {
-          headers: { 'X-API-Key': OPENWA_API_KEY },
-          timeout: 5000
-        });
+        const qrRes = await axios.get(`${apiUrl}/api/sessions/${sessionId}/qr`, { headers, timeout: 5000 });
         qrCode = qrRes.data?.qrCode || qrRes.data?.qr || null;
       } catch (qrErr) {
-        // Keep qrCode as null if not ready yet
+        // QR not ready yet
       }
     }
 
     return {
       success: true,
-      status: res.data?.status || 'disconnected',
-      phone: res.data?.phone || null,
-      pushName: res.data?.pushName || null,
+      sessionId: sessionId,
+      status: session.status || 'qr_ready',
+      phone: session.phone || null,
+      pushName: session.pushName || null,
       qr: qrCode
     };
   } catch (err) {
