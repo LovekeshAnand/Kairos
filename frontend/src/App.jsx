@@ -380,8 +380,10 @@ export default function App() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[11px] font-mono font-bold text-purple-400 uppercase tracking-wider">Step 2</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    Notion Engine
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                    systemStatus.notion ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  }`}>
+                    {systemStatus.notion ? `Connected (${systemStatus.notionBot || 'Bot Active'})` : 'Notion Engine'}
                   </span>
                 </div>
                 
@@ -410,11 +412,11 @@ export default function App() {
                       Notion Secret Token
                     </label>
                     <input 
-                      type="password"
+                      type="text"
                       placeholder="ntn_..."
                       value={notionSetup.apiKey}
                       onChange={e => setNotionSetup(prev => ({ ...prev, apiKey: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500 font-mono"
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500 font-mono"
                     />
                   </div>
 
@@ -427,7 +429,7 @@ export default function App() {
                       placeholder="https://notion.so/Kairos-Operations-Hub-..."
                       value={notionSetup.parentPage}
                       onChange={e => setNotionSetup(prev => ({ ...prev, parentPage: e.target.value }))}
-                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-purple-500"
+                      className="w-full px-3 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
                     />
                   </div>
 
