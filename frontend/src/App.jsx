@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Plasma from './components/Plasma';
-import LegalModal from './components/LegalModal';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
 import { 
   CheckCircle2, 
   ArrowRight, 
@@ -25,13 +26,24 @@ import {
 } from 'lucide-react';
 
 export default function App() {
+  const [currentRoute, setCurrentRoute] = useState(window.location.pathname || '/');
   const [authState, setAuthState] = useState({ loading: true, authenticated: false, user: null });
   const [systemStatus, setSystemStatus] = useState({ connectedAccounts: [] });
   const [waStatus, setWaStatus] = useState({ status: 'checking', phone: null, pushName: null, qr: null });
   const [waLoading, setWaLoading] = useState(false);
   const [notionSetup, setNotionSetup] = useState({ apiKey: '', parentPage: '', loading: false, result: null, error: null });
-  const [activeTab, setActiveTab] = useState('all');
-  const [legalModal, setLegalModal] = useState({ isOpen: false, tab: 'privacy' });
+
+  const navigate = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentRoute(path);
+    window.scrollTo(0, 0);
+  };
+
+  useEffect(() => {
+    const handlePop = () => setCurrentRoute(window.location.pathname);
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
 
   const checkAuth = async () => {
     try {
@@ -159,11 +171,14 @@ export default function App() {
 
       {/* Minimalist Professional Navbar */}
       <nav className="relative z-30 w-full px-6 md:px-12 py-3.5 flex items-center justify-between border-b border-zinc-800/80 bg-[#080b11]/85 backdrop-blur-md sticky top-0">
-        <div className="flex items-center gap-3">
+        <div 
+          onClick={() => navigate('/')}
+          className="flex items-center gap-3 cursor-pointer group"
+        >
           <img 
             src="/kairos logo.png" 
             alt="Kairos" 
-            className="w-8 h-8 rounded-lg object-cover border border-zinc-700/60 shadow-sm" 
+            className="w-8 h-8 rounded-lg object-cover border border-zinc-700/60 shadow-sm group-hover:border-zinc-500 transition-all" 
           />
           <div className="flex items-center gap-2">
             <span className="font-bold text-base tracking-tight text-white font-mono">
@@ -190,14 +205,6 @@ export default function App() {
             <span>GitHub</span>
             <ExternalLink className="w-3 h-3" />
           </a>
-
-          <button
-            onClick={() => setLegalModal({ isOpen: true, tab: 'privacy' })}
-            className="hidden md:flex items-center gap-1 text-xs text-zinc-400 hover:text-cyan-400 transition-colors cursor-pointer"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Legal & Privacy</span>
-          </button>
 
           {authState.authenticated && authState.user ? (
             <div className="flex items-center gap-3 pl-3 border-l border-zinc-800">
@@ -230,8 +237,14 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Main Container */}
-      <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 flex flex-col gap-12">
+      {/* Standalone Route Views */}
+      {currentRoute === '/terms' ? (
+        <Terms onBack={() => navigate('/')} />
+      ) : currentRoute === '/privacy' ? (
+        <Privacy onBack={() => navigate('/')} />
+      ) : (
+        /* Main Container */
+        <main className="relative z-10 flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 flex flex-col gap-12">
         
         {/* ========================================================================= */}
         {/* SECTION 1: HERO SECTION                                                   */}
@@ -580,35 +593,32 @@ export default function App() {
           </div>
         </section>
 
-      </main>
+        </main>
+      )}
 
-      {/* Footer */}
-      <footer className="relative z-20 py-6 text-center text-xs text-zinc-500 border-t border-zinc-800/60 bg-[#080b11]/90 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between px-6 md:px-12 gap-4">
+      {/* Minimalist Footer */}
+      <footer className="relative z-20 py-6 text-xs text-zinc-500 border-t border-zinc-800/60 bg-[#080b11]/90 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between px-6 md:px-12 gap-4">
         <div>
           Kairos Autonomous Operations Hub &bull; Backed by SQLite, Google Cloud & Notion API
         </div>
         <div className="flex items-center gap-4 text-xs text-zinc-400">
-          <button 
-            onClick={() => setLegalModal({ isOpen: true, tab: 'terms' })}
-            className="hover:text-cyan-400 transition cursor-pointer underline"
+          <a 
+            href="/terms"
+            onClick={(e) => { e.preventDefault(); navigate('/terms'); }}
+            className="hover:text-zinc-200 transition text-zinc-400 cursor-pointer"
           >
             Terms of Service
-          </button>
+          </a>
           <span>&bull;</span>
-          <button 
-            onClick={() => setLegalModal({ isOpen: true, tab: 'privacy' })}
-            className="hover:text-cyan-400 transition cursor-pointer underline"
+          <a 
+            href="/privacy"
+            onClick={(e) => { e.preventDefault(); navigate('/privacy'); }}
+            className="hover:text-zinc-200 transition text-zinc-400 cursor-pointer"
           >
             Privacy Policy
-          </button>
+          </a>
         </div>
       </footer>
-
-      <LegalModal 
-        isOpen={legalModal.isOpen} 
-        onClose={() => setLegalModal({ isOpen: false, tab: 'privacy' })} 
-        defaultTab={legalModal.tab} 
-      />
 
     </div>
   );
